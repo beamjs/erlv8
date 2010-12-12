@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1,source/1,run/1,register/3]).
+-export([start_link/1,source/1,run/1,register/2,register/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -62,6 +62,9 @@ init([Script]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({register, Mod}, _From, #state{ mods = Mods} = State) ->
+	{reply, ok, State#state{ mods = [{Mod,Mod}|Mods] }};
+
 handle_call({register, Name, Mod}, _From, #state{ mods = Mods} = State) ->
 	{reply, ok, State#state{ mods = [{Name,Mod}|Mods] }};
 
@@ -152,6 +155,9 @@ get_mod(M,#state{ mods = Mods }) ->
 %%%===================================================================
 %%% Public functions
 %%%===================================================================
+register(Server, Mod) ->
+	gen_server:call(Server, {register, Mod}).
+
 register(Server, Name, Mod) ->
 	gen_server:call(Server, {register, Name, Mod}).
 

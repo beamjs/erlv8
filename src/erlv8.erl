@@ -28,7 +28,7 @@ apply_test() ->
 	timer:sleep(1000),
 	stop().
 
-registration_test() ->
+registration_for_aliasing_test() ->
 	start(),
 	{ok, Pid} = new_script("Erlang.__call__('IO','format',['Hello world~n']);"),
 	erlv8_script:register(Pid,'IO',io),
