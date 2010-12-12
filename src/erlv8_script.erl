@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1,source/1,run/1]).
+-export([start_link/1,source/1,run/1,register/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -12,7 +12,8 @@
 -define(SERVER, ?MODULE). 
 
 -record(state, {
-		  script
+		  script,
+		  mods = []
 		 }).
 
 %%%===================================================================
@@ -61,6 +62,9 @@ init([Script]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({register, Name, Mod}, _From, #state{ mods = Mods} = State) ->
+	{reply, ok, State#state{ mods = [{Name,Mod}|Mods] }};
+
 handle_call(source, _From, #state{ script = Script } = State) ->
 	Reply = erlv8_nif:get_script(Script),
 	{reply, Reply, State};
@@ -95,9 +99,9 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({M, F, A}, State) when is_atom(M), is_atom(F), is_list(A) ->
+handle_info({M, F, A}, State) ->
 	spawn(fun () ->
-				  erlang:apply(M,F,A)
+				  erlang:apply(get_mod(M, State),F,A)
 		  end),
 	{noreply, State};
 %% TODO: make these events
@@ -142,11 +146,15 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
-
+get_mod(M,#state{ mods = Mods }) ->
+	proplists:get_value(M,Mods,M).
 
 %%%===================================================================
 %%% Public functions
 %%%===================================================================
+register(Server, Name, Mod) ->
+	gen_server:call(Server, {register, Name, Mod}).
+
 source(Server) ->
 	gen_server:call(Server, source).
 
