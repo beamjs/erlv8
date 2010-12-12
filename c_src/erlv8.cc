@@ -145,7 +145,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   return enif_make_badarg(env);
 };
 
-v8::Handle<v8::Value> ApplyFun(const v8::Arguments &arguments) {
+v8::Handle<v8::Value> CallFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   ErlScript * script = (ErlScript *)__ERLV8__(v8::Context::GetCurrent()->Global());
   
@@ -166,10 +166,10 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   script_resource = enif_open_resource_type(env, NULL, "erlv8_resource", script_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
   v8::HandleScope handle_scope;
 
-  v8::Handle<v8::FunctionTemplate> EapplyF = v8::FunctionTemplate::New(ApplyFun);
+  v8::Handle<v8::FunctionTemplate> EcallF = v8::FunctionTemplate::New(CallFun);
 
   v8::Handle<v8::ObjectTemplate> erlang = v8::ObjectTemplate::New();
-  erlang->Set(v8::String::New("__apply__"),EapplyF);
+  erlang->Set(v8::String::New("__call__"),EcallF);
 
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
   global_template->Set(v8::String::New("Erlang"),erlang);

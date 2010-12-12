@@ -23,14 +23,14 @@ valid_script_creation_test() ->
 
 apply_test() ->
 	start(),
-	{ok, Pid} = new_script("Erlang.__apply__('io','format',['Hello world~n']);"),
+	{ok, Pid} = new_script("Erlang.__call__('io','format',['Hello world~n']);"),
 	erlv8_script:run(Pid),
 	timer:sleep(1000),
 	stop().
 
 registration_test() ->
 	start(),
-	{ok, Pid} = new_script("Erlang.__apply__('IO','format',['Hello world~n']);"),
+	{ok, Pid} = new_script("Erlang.__call__('IO','format',['Hello world~n']);"),
 	erlv8_script:register(Pid,'IO',io),
 	erlv8_script:run(Pid),
 	timer:sleep(1000),
