@@ -1,7 +1,7 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([new_script/1,get_script/1,run/2]).
+-export([new_script/1,get_script/1,run/2,register/3]).
 
 init() ->
 	case code:which(erlv8_nif) of
@@ -18,4 +18,7 @@ get_script(_ScriptObject) ->
 	error(not_loaded).
 
 run(_ScriptObject,_Server) ->
+	error(not_loaded).
+
+register(_ScriptObject,_Name,_Exports) ->
 	error(not_loaded).
