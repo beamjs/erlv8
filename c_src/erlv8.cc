@@ -317,7 +317,6 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&array);
 	  obj->Set(term_to_js(env,array[0]),
 			   term_to_js(env,array[1]));
-	  //	  cout << *v8::String::AsciiValue(term_to_js(env,array[0])->ToString()) << "=" << obj->Get(term_to_js(env,array[0]))->ToInteger()->Value() << endl;
 
 	  current = tail;
 	}
