@@ -23,8 +23,6 @@ public:
   ErlNifPid *server;
   ErlNifEnv *env;
 
-  ERL_NIF_TERM resource;  
-
   ErlScript(ErlNifEnv * a_env, const char *a_buf, unsigned a_len) : caller_env(env), buf(a_buf), len(a_len) {
 	env = enif_alloc_env();
 	{
@@ -103,8 +101,6 @@ static ERL_NIF_TERM new_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   ptr->script = escript;
 
   term = enif_make_resource(env, ptr);
-
-  escript->resource = enif_make_copy(escript->env,term);
 
   enif_release_resource(ptr);
 
@@ -186,8 +182,11 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 
   ERL_NIF_TERM term = (ERL_NIF_TERM) arguments.Data()->ToInteger()->Value();
 
+  script_res_t *ptr = (script_res_t *)enif_alloc_resource(script_resource, sizeof(script_res_t));
+  ptr->script = script;
+
   ERL_NIF_TERM * resource_term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
-  *resource_term_ref = script->resource;
+  *resource_term_ref = enif_make_resource(script->env, ptr);
 
   v8::Local<v8::Array> array = v8::Array::New(arguments.Length() + 1);
 
@@ -256,18 +255,6 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   return enif_make_badarg(env); // may this cause problems?
 };
 
-v8::Handle<v8::Value> CallFun(const v8::Arguments &arguments) {
-  v8::HandleScope handle_scope;
-  ErlScript * script = (ErlScript *)__ERLV8__(v8::Context::GetCurrent()->Global());
-  
-  ERL_NIF_TERM M = enif_make_atom(script->env,*v8::String::AsciiValue(arguments[0]->ToString()));
-  ERL_NIF_TERM F = enif_make_atom(script->env,*v8::String::AsciiValue(arguments[1]->ToString()));
-  ERL_NIF_TERM A = js_to_term(script->env,arguments[2]);
-
-  script->send(enif_make_tuple(script->env, 3, M, F, A));
-
-  return v8::Integer::New(0); // FIXME
-}
 
 static void script_resource_destroy(ErlNifEnv* env, void* obj)
 {
@@ -279,13 +266,7 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   v8::V8::Initialize();
   v8::HandleScope handle_scope;
 
-  v8::Handle<v8::FunctionTemplate> EcallF = v8::FunctionTemplate::New(CallFun);
-
-  v8::Handle<v8::ObjectTemplate> erlang = v8::ObjectTemplate::New();
-  erlang->Set(v8::String::New("__call__"),EcallF);
-
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-  global_template->Set(v8::String::New("Erlang"),erlang);
 
   v8::Locker::StartPreemption(100);
 

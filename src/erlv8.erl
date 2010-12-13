@@ -28,14 +28,16 @@ valid_script_creation_test() ->
 
 apply_test() ->
 	start(),
-	{ok, Pid} = new_script("Erlang.__call__('io','format',['Hello world~n']);"),
+	{ok, Pid} = new_script("__call__('io','format',['Hello world~n']);"),
+	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
 	erlv8_script:run(Pid),
 	timer:sleep(1000),
 	stop().
 
 aliasing_test() ->
 	start(),
-	{ok, Pid} = new_script("Erlang.__call__('IO','format',['Hello world~n']);"),
+	{ok, Pid} = new_script("__call__('IO','format',['Hello world~n']);"),
+	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
 	erlv8_script:alias(Pid,'IO',io),
 	erlv8_script:run(Pid),
 	timer:sleep(1000),
@@ -43,7 +45,8 @@ aliasing_test() ->
 
 exports_test() ->
 	start(),
-	 {ok, Pid} = new_script("exports.test = 1; Erlang.__call__('io','format',['Exports: ~p~n',[exports]]);"),
+	 {ok, Pid} = new_script("exports.test = 1; __call__('io','format',['Exports: ~p~n',[exports]]);"),
+	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
 	erlv8_script:register(Pid,exports,erlv8_mod_exports),
 	erlv8_script:run(Pid),
 	timer:sleep(1000),
