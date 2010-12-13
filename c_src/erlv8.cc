@@ -11,6 +11,7 @@ static v8::Persistent<v8::ObjectTemplate> global_template;
 static ErlNifResourceType * script_resource;
 
 v8::Handle<v8::Object> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term); // fwd
+ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
 
 class ErlScript {
 public:
@@ -23,8 +24,17 @@ public:
   ErlNifPid *server;
   ErlNifEnv *env;
 
+  ERL_NIF_TERM result;
+  ErlNifCond *result_cond;
+  ErlNifMutex *result_cond_mtx;
+
+  
+
   ErlScript(ErlNifEnv * a_env, const char *a_buf, unsigned a_len) : caller_env(env), buf(a_buf), len(a_len) {
 	env = enif_alloc_env();
+	result_cond = enif_cond_create((char *)"erlv8_result_condition");
+	result_cond_mtx = enif_mutex_create((char *)"erlv8_result_condition_mutex");
+
 	{
 	  v8::Locker locker;
 	  v8::HandleScope handle_scope;
@@ -37,7 +47,13 @@ public:
   ~ErlScript() { 
 	context.Dispose();
 	enif_free_env(env);
+	enif_cond_destroy(result_cond);
+	enif_mutex_destroy(result_cond_mtx);
   };
+
+  void waitForResult() {
+	enif_cond_wait(result_cond,result_cond_mtx);
+  }
 
   void send(ERL_NIF_TERM term) {
 	enif_send(NULL, server, env, term);
@@ -72,7 +88,13 @@ public:
 	} else {
 	  send(enif_make_atom(env,"starting"));
 	  v8::Handle<v8::Value> value = compiled->Run();
-      send(enif_make_atom(env,"finished"));
+	  if (value.IsEmpty()) {
+		send(enif_make_tuple2(env,enif_make_atom(env,"exception"),
+							  js_to_term(env,try_catch.Exception())));
+	  } else {
+		ERL_NIF_TERM result = js_to_term(env,value);
+		send(enif_make_tuple2(env,enif_make_atom(env,"finished"),result));
+	  }
 	}
     } 
 
@@ -162,7 +184,19 @@ static ERL_NIF_TERM script_send(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
 	return enif_make_badarg(env);
   };
  
-}
+};
+
+static ERL_NIF_TERM result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	res->script->result = enif_make_copy(res->script->env,argv[1]);
+	enif_cond_broadcast(res->script->result_cond);
+	return enif_make_atom(env,"ok");
+  } else {
+	return enif_make_badarg(env);
+  };
+ 
+};
 
 static ErlNifFunc nif_funcs[] =
 {
@@ -170,12 +204,12 @@ static ErlNifFunc nif_funcs[] =
   {"get_script", 1, get_script},
   {"run", 2, run},
   {"register", 3, register_module},
-  {"script_send", 2, script_send}
+  {"script_send", 2, script_send},
+  {"result",2, result}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
 
-ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   ErlScript * script = (ErlScript *)__ERLV8__(v8::Context::GetCurrent()->Global());
@@ -196,6 +230,8 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
       array->Set(i + 1,arguments[i]);
   }
   script->send(enif_make_tuple2(script->env,enif_make_copy(script->env,term),js_to_term(script->env,array)));
+  script->waitForResult();
+  return term_to_js(script->env,script->result);
 };
 
 v8::Handle<v8::Object> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {

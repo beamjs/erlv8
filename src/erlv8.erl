@@ -22,8 +22,10 @@ load_file(Filename) ->
 -ifdef(TEST).
 valid_script_creation_test() ->
 	start(),
-	{ok, Pid} = new_script("1+1"),
+	{ok, Pid} = new_script("1+1;"),
 	?assert(is_pid(Pid)),
+	erlv8_script:run(Pid),
+	timer:sleep(1000),
 	stop().
 
 apply_test() ->
@@ -52,13 +54,5 @@ exports_test() ->
 	timer:sleep(1000),
 	stop().
 
-require_test() ->
-	start(),
-	Filename = filename:join([filename:dirname(code:which(erlv8)),"../priv/test.js"]),
-	{ok, Pid} = new_script(lists:concat(["require('",Filename,"');"])),
-	erlv8_script:register(Pid,require,erlv8_mod_require),
-	erlv8_script:run(Pid),
-	timer:sleep(1000),
-	stop().
 
 -endif.

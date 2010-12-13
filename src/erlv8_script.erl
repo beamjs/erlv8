@@ -107,8 +107,9 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({F,A}, State) when is_function(F), is_list(A) ->
-	erlang:apply(F,A),
+handle_info({F,A}, #state{ script = Script } = State) when is_function(F), is_list(A) ->
+	Result = erlang:apply(F,A),
+	erlv8_nif:result(Script, Result),
 	{noreply, State};
 handle_info({M, F, A}, State) ->
 	spawn(fun () ->
@@ -124,7 +125,10 @@ handle_info(compilation_failed, State) ->
 	{noreply, State};
 handle_info(starting, State) ->
 	{noreply, State};
-handle_info(finished, State) ->
+handle_info({exception, Result}, State) ->
+	io:format("Exception is ~p~n",[Result]),
+	{noreply, State};
+handle_info({finished, _Exception}, State) ->
 	{noreply, State};
 handle_info(_Info, State) ->
 	{noreply, State}.
