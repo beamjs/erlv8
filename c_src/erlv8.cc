@@ -23,6 +23,8 @@ public:
   ErlNifPid *server;
   ErlNifEnv *env;
 
+  ERL_NIF_TERM resource;  
+
   ErlScript(ErlNifEnv * a_env, const char *a_buf, unsigned a_len) : caller_env(env), buf(a_buf), len(a_len) {
 	env = enif_alloc_env();
 	{
@@ -99,7 +101,10 @@ static ERL_NIF_TERM new_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 
   script_res_t *ptr = (script_res_t *)enif_alloc_resource(script_resource, sizeof(script_res_t));
   ptr->script = escript;
+
   term = enif_make_resource(env, ptr);
+
+  escript->resource = enif_make_copy(escript->env,term);
 
   enif_release_resource(ptr);
 
@@ -152,12 +157,24 @@ static ERL_NIF_TERM register_module(ErlNifEnv *env, int argc, const ERL_NIF_TERM
   return enif_make_atom(env,"ok");
 };
 
+static ERL_NIF_TERM script_send(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	res->script->send(enif_make_copy(res->script->env,argv[1]));
+	return argv[1];
+  } else {
+	return enif_make_badarg(env);
+  };
+ 
+}
+
 static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 1, new_script},
   {"get_script", 1, get_script},
   {"run", 2, run},
-  {"register", 3, register_module}
+  {"register", 3, register_module},
+  {"script_send", 2, script_send}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
@@ -169,9 +186,15 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 
   ERL_NIF_TERM term = (ERL_NIF_TERM) arguments.Data()->ToInteger()->Value();
 
-  v8::Local<v8::Array> array = v8::Array::New(arguments.Length());
+  ERL_NIF_TERM * resource_term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
+  *resource_term_ref = script->resource;
+
+  v8::Local<v8::Array> array = v8::Array::New(arguments.Length() + 1);
+
+  array->Set(0, v8::External::New(resource_term_ref));
+
   for (signed int i=0;i<arguments.Length();i++) {
-      array->Set(i,arguments[i]);
+      array->Set(i + 1,arguments[i]);
   }
   script->send(enif_make_tuple2(script->env,enif_make_copy(script->env,term),js_to_term(script->env,array)));
 };
@@ -224,6 +247,11 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,keys->Length());
 	free(arr);
 	return list;
+  } else if (val->IsExternal()) { // passing terms
+	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(val);
+	ERL_NIF_TERM term = *term_ref;
+	free(term_ref);
+	return term;
   }
   return enif_make_badarg(env); // may this cause problems?
 };

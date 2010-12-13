@@ -3,10 +3,10 @@
 -export([exports/0]).
 
 exports() ->
-	fun require/1.
+	fun require/2.
 
 
-require(What) ->
+require(_Script,What) ->
 	{ok, Script} = erlv8:load_file(What),
 	erlv8_script:run(Script),
 	[].
