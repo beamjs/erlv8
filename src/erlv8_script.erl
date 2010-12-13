@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1,source/1,run/1,register/2,register/3,alias/3]).
+-export([start_link/1,source/1,run/1,register/2,register/3,alias/3,add_handler/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -13,7 +13,8 @@
 
 -record(state, {
 		  script,
-		  mods = []
+		  mods = [],
+		  event_mgr
 		 }).
 
 %%%===================================================================
@@ -46,7 +47,8 @@ start_link(Script) ->
 %% @end
 %%--------------------------------------------------------------------
 init([Script]) ->
-	{ok, #state{script = Script}}.
+	{ok, EventPid} = gen_event:start_link(),
+	{ok, #state{script = Script, event_mgr = EventPid}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -62,6 +64,10 @@ init([Script]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } = State) ->
+	Result = gen_event:add_handler(EventMgr,Handler,Args),
+	{reply, Result, State};
+
 handle_call({register, Mod}, _From, #state{ script = Script, mods = Mods} = State) ->
 	erlv8_nif:register(Script, Mod,Mod:exports()),
 	{reply, ok, State#state{ mods = [{Mod,Mod}|Mods] }};
@@ -125,10 +131,11 @@ handle_info(compilation_failed, State) ->
 	{noreply, State};
 handle_info(starting, State) ->
 	{noreply, State};
-handle_info({exception, Result}, State) ->
-	io:format("Exception is ~p~n",[Result]),
+handle_info({exception, _Exception}=Evt, #state{ event_mgr = EventMgr } = State) ->
+	gen_event:notify(EventMgr,Evt),
 	{noreply, State};
-handle_info({finished, _Exception}, State) ->
+handle_info({finished, _Result}=Evt, #state{ event_mgr = EventMgr } = State) ->
+	gen_event:notify(EventMgr,Evt),
 	{noreply, State};
 handle_info(_Info, State) ->
 	{noreply, State}.
@@ -167,6 +174,9 @@ get_mod(M,#state{ mods = Mods }) ->
 %%%===================================================================
 %%% Public functions
 %%%===================================================================
+add_handler(Server, Handler, Args) ->
+	gen_server:call(Server, {add_handler, Handler, Args}).
+
 register(Server, Mod) ->
 	gen_server:call(Server, {register, Mod}).
 

@@ -24,16 +24,28 @@ valid_script_creation_test() ->
 	start(),
 	{ok, Pid} = new_script("1+1;"),
 	?assert(is_pid(Pid)),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
 	erlv8_script:run(Pid),
-	timer:sleep(1000),
+	receive 
+		{finished, 2} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
 	stop().
 
 apply_test() ->
 	start(),
 	{ok, Pid} = new_script("__call__('io','format',['Hello world~n']);"),
 	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
 	erlv8_script:run(Pid),
-	timer:sleep(1000),
+	receive
+		{finished, _} ->
+			ok
+	end,
 	stop().
 
 aliasing_test() ->
@@ -41,8 +53,13 @@ aliasing_test() ->
 	{ok, Pid} = new_script("__call__('IO','format',['Hello world~n']);"),
 	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
 	erlv8_script:alias(Pid,'IO',io),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
 	erlv8_script:run(Pid),
-	timer:sleep(1000),
+	receive
+		{finished, _} ->
+			ok
+	end,
 	stop().
 
 exports_test() ->
@@ -51,7 +68,12 @@ exports_test() ->
 	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
 	erlv8_script:register(Pid,exports,erlv8_mod_exports),
 	erlv8_script:run(Pid),
-	timer:sleep(1000),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	receive
+		{finished, _} ->
+			ok
+	end,
 	stop().
 
 
