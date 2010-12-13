@@ -10,8 +10,26 @@ using namespace __gnu_cxx;
 static v8::Persistent<v8::ObjectTemplate> global_template;
 static ErlNifResourceType * script_resource;
 
-v8::Handle<v8::Object> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term); // fwd
+v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term); // fwd
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
+
+int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
+{
+  ERL_NIF_TERM head, tail;
+  ERL_NIF_TERM current = term;
+  int arity;
+  ERL_NIF_TERM *array;
+  if (!enif_is_list(env,term)) {
+	return 0;
+  }
+  while (enif_get_list_cell(env, current, &head, &tail)) {
+	if (!enif_is_tuple(env,head)) return 0; // not a tuple -> not a proplist
+	enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&array);
+	if (arity != 2) return 0; // does not consist of two elements -> not a proplist
+	current = tail;
+  }
+  return 1;
+}
 
 class ErlScript {
 public:
@@ -66,7 +84,7 @@ public:
 	  v8::HandleScope handle_scope;
 	  v8::Context::Scope context_scope(context);
 
-	  v8::Local<v8::Object> obj = v8::Local<v8::Object>::New(term_to_js(env,exports));
+	  v8::Local<v8::Value> obj = v8::Local<v8::Value>::New(term_to_js(env,exports));
 	  context->Global()->Set(v8::String::New(name),obj);
 	}
   };
@@ -216,6 +234,34 @@ static ERL_NIF_TERM get_global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   return result;
 };
 
+static ERL_NIF_TERM set_global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  ERL_NIF_TERM result;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->script->context);
+
+	  v8::Handle<v8::Object> global = res->script->context->Global();
+	  v8::Handle<v8::Object> new_global = term_to_js(env,argv[1])->ToObject();
+	  
+	  v8::Handle<v8::Array> keys = new_global->GetPropertyNames();
+
+	  for (unsigned int i=0;i<keys->Length();i++) {
+		v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
+		global->Set(key,v8::Local<v8::Value>::New(new_global->Get(key)));
+	  }
+	  // TODO: aren't we supposed to destruct new_global?
+
+	  result = enif_make_atom(env,"ok");
+	}
+  } else {
+	result = enif_make_badarg(env);
+  };
+  return result;
+};
+
 static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 1, new_script},
@@ -224,7 +270,8 @@ static ErlNifFunc nif_funcs[] =
   {"register", 3, register_module},
   {"script_send", 2, script_send},
   {"result",2, result},
-  {"get_global",1, get_global}
+  {"get_global",1, get_global},
+  {"set_global",2, set_global}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
@@ -253,12 +300,49 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   return term_to_js(script->env,script->result);
 };
 
-v8::Handle<v8::Object> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
+v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   v8::HandleScope handle_scope;
-  if (enif_is_empty_list(env,term)) {
-	return v8::Object::New();
+  int _int;
+  if (enif_get_int(env,term,&_int)) {
+	return v8::Local<v8::Integer>::New(v8::Integer::New(_int));
+  } else if (enif_is_empty_list(env,term)) {
+	return v8::Local<v8::Object>::New(v8::Object::New());
+  } else if (enif_is_proplist(env,term)) {
+	v8::Handle<v8::Object> obj = v8::Object::New();
+	ERL_NIF_TERM head, tail;
+	ERL_NIF_TERM current = term;
+	int arity;
+	ERL_NIF_TERM *array;
+	while (enif_get_list_cell(env, current, &head, &tail)) {
+	  enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&array);
+	  obj->Set(term_to_js(env,array[0]),
+			   term_to_js(env,array[1]));
+	  //	  cout << *v8::String::AsciiValue(term_to_js(env,array[0])->ToString()) << "=" << obj->Get(term_to_js(env,array[0]))->ToInteger()->Value() << endl;
+
+	  current = tail;
+	}
+	return v8::Persistent<v8::Object>::New(obj);
   } else if (enif_is_list(env,term)) {
-    // TODO
+	  // try it as a string
+	  unsigned len;
+	  enif_get_list_length(env, term, &len);
+	  char * str = (char *) malloc(len + 1);
+	  if (enif_get_string(env, term, str, len + 1, ERL_NIF_LATIN1)) {
+		v8::Handle<v8::String> s = v8::String::New((const char *)str);
+		free(str);
+		return s;
+	  }
+	  // if it is not a string, it is a list
+	  free(str);
+	  ERL_NIF_TERM head, tail;
+	  ERL_NIF_TERM current = term;
+	  v8::Handle<v8::Object> arr = v8::Array::New(len);
+	  int i = 0;
+	  while (enif_get_list_cell(env, current, &head, &tail)) {
+		arr->Set(v8::Integer::New(i),term_to_js(env,head));
+		i++; current = tail;
+	  }
+	  return v8::Local<v8::Object>::New(arr);
   } else if (enif_is_fun(env, term)) {
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::New(term));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());

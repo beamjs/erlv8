@@ -3,7 +3,7 @@
 -behaviour(gen_server).
 
 %% API
--export([start_link/1,source/1,run/1,register/2,register/3,alias/3,global/1,add_handler/3]).
+-export([start_link/1,source/1,run/1,register/2,register/3,alias/3,global/1,global/2,add_handler/3]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -85,6 +85,10 @@ handle_call(source, _From, #state{ script = Script } = State) ->
 
 handle_call(global, _From, #state{ script = Script } = State) ->
 	Reply = erlv8_nif:get_global(Script),
+	{reply, Reply, State};
+
+handle_call({global, Global}, _From, #state{ script = Script } = State) ->
+	Reply = erlv8_nif:set_global(Script, Global),
 	{reply, Reply, State};
 
 handle_call(_Request, _From, State) ->
@@ -197,3 +201,6 @@ run(Server) ->
 
 global(Server) ->
 	gen_server:call(Server, global).
+
+global(Server, Global) when is_list(Global) ->
+	gen_server:call(Server, {global, Global}).
