@@ -7,9 +7,7 @@ exports() ->
 
 
 require(What) ->
-	{ok, B} = file:read_file(What),
-	L = binary_to_list(B),
-	{ok, Script} = erlv8:new_script(L),
+	{ok, Script} = erlv8:load_file(What),
 	erlv8_script:run(Script),
 	[].
 
