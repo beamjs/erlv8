@@ -162,15 +162,34 @@ static ErlNifFunc nif_funcs[] =
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
 
+ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
+v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
+  v8::HandleScope handle_scope;
+  ErlScript * script = (ErlScript *)__ERLV8__(v8::Context::GetCurrent()->Global());
+
+  ERL_NIF_TERM term = (ERL_NIF_TERM) arguments.Data()->ToInteger()->Value();
+
+  v8::Local<v8::Array> array = v8::Array::New(arguments.Length());
+  for (signed int i=0;i<arguments.Length();i++) {
+      array->Set(i,arguments[i]);
+  }
+  script->send(enif_make_tuple2(script->env,enif_make_copy(script->env,term),js_to_term(script->env,array)));
+};
+
 v8::Handle<v8::Object> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   v8::HandleScope handle_scope;
   if (enif_is_empty_list(env,term)) {
 	return v8::Object::New();
   } else if (enif_is_list(env,term)) {
-
+    // TODO
+  } else if (enif_is_fun(env, term)) {
+    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::New(term));
+	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
+	return f;
   }
   return v8::Object::New(); // if nothing else works, may be an empty object will be ok
 };
+
 
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   v8::HandleScope handle_scope;
@@ -186,7 +205,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
     v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(val);
 	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
 	for (unsigned int i=0;i<array->Length();i++) {
-        arr[i] = js_to_term(env,array->Get(v8::Integer::New(i)));
+        arr[i] = js_to_term(env,array->Get(v8::Integer::NewFromUnsigned(i)));
 	}
 	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,array->Length());
 	free(arr);

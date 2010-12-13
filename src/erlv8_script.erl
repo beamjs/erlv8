@@ -107,6 +107,9 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_info({F,A}, State) when is_function(F), is_list(A) ->
+	erlang:apply(F,A),
+	{noreply, State};
 handle_info({M, F, A}, State) ->
 	spawn(fun () ->
 				  erlang:apply(get_mod(M, State),F,A)
