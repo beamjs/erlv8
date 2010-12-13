@@ -35,46 +35,6 @@ valid_script_creation_test() ->
 	end,
 	stop().
 
-apply_test() ->
-	start(),
-	{ok, Pid} = new_script("__call__('io','format',['Hello world~n']);"),
-	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
-	Self = self(),
-	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
-	erlv8_script:run(Pid),
-	receive
-		{finished, _} ->
-			ok
-	end,
-	stop().
-
-aliasing_test() ->
-	start(),
-	{ok, Pid} = new_script("__call__('IO','format',['Hello world~n']);"),
-	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
-	erlv8_script:alias(Pid,'IO',io),
-	Self = self(),
-	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
-	erlv8_script:run(Pid),
-	receive
-		{finished, _} ->
-			ok
-	end,
-	stop().
-
-exports_test() ->
-	start(),
-	{ok, Pid} = new_script("exports.test = 1; __call__('io','format',['Exports: ~p~n',[exports]]);"),
-	erlv8_script:register(Pid,'__call__',erlv8_mod_call),
-	erlv8_script:register(Pid,exports,erlv8_mod_exports),
-	erlv8_script:run(Pid),
-	Self = self(),
-	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
-	receive
-		{finished, _} ->
-			ok
-	end,
-	stop().
 
 
 -endif.
