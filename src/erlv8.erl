@@ -44,4 +44,13 @@ exports_test() ->
 	timer:sleep(1000),
 	stop().
 
+require_test() ->
+	start(),
+	Filename = filename:join([filename:dirname(code:which(erlv8)),"../priv/test.js"]),
+	{ok, Pid} = new_script(lists:concat(["require('",Filename,"');"])),
+	erlv8_script:register(Pid,require,erlv8_mod_require),
+	erlv8_script:run(Pid),
+	timer:sleep(1000),
+	stop().
+
 -endif.
