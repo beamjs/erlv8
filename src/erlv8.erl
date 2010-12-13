@@ -35,6 +35,20 @@ valid_script_creation_test() ->
 	end,
 	stop().
 
+script_global_test() ->
+	start(),
+	{ok, Pid} = new_script("var a = 1+1;"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, _} ->
+			?assertEqual([{"a",2}],erlv8_script:global(Pid));
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 
 
 -endif.

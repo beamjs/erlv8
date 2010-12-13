@@ -198,6 +198,24 @@ static ERL_NIF_TERM result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
  
 };
 
+static ERL_NIF_TERM get_global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  ERL_NIF_TERM result;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->script->context);
+
+	  v8::Handle<v8::Object> global = res->script->context->Global();
+	  result = js_to_term(env,global);
+	}
+  } else {
+	result = enif_make_badarg(env);
+  };
+  return result;
+};
+
 static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 1, new_script},
@@ -205,7 +223,8 @@ static ErlNifFunc nif_funcs[] =
   {"run", 2, run},
   {"register", 3, register_module},
   {"script_send", 2, script_send},
-  {"result",2, result}
+  {"result",2, result},
+  {"get_global",1, get_global}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
@@ -271,6 +290,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   } else if (val->IsObject()) {
     v8::Handle<v8::Object> obj = v8::Handle<v8::Object>::Cast(val);
 	v8::Handle<v8::Array> keys = obj->GetPropertyNames();
+
 	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
 	for (unsigned int i=0;i<keys->Length();i++) {
 	  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
