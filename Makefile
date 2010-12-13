@@ -14,7 +14,7 @@ submodules:
 	@git submodule update
 
 deps/v8/libv8.a: submodules
-	@cd deps/v8 &&  scons $(V8FLAGS)
+	@cd deps/v8 && scons $(V8FLAGS)
 
 dependencies: deps/v8/libv8.a
 
