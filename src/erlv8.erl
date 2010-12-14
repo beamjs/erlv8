@@ -1,5 +1,6 @@
 -module(erlv8).
 -export([start/0,stop/0,new_script/1]).
+-include_lib("erlv8/include/erlv8.hrl").
 
 start() ->
 	application:start(erlv8).
@@ -133,6 +134,24 @@ term_to_js_number_test() ->
 	end,
 	stop().
 
+invocation_test() ->
+	start(),
+	{ok, Pid} = new_script("test()"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:register(Pid, test, fun exports/0),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, 123} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
+exports() ->
+	A = fun (_Script, #erlv8_fun_invocation{} = _Invocation) -> 123 end,
+	A.
 
 
 -endif.

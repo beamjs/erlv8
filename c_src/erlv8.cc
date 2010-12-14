@@ -289,12 +289,20 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   ERL_NIF_TERM * resource_term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
   *resource_term_ref = enif_make_resource(script->env, ptr);
 
-  v8::Local<v8::Array> array = v8::Array::New(arguments.Length() + 1);
+  ERL_NIF_TERM * invocation_term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
+  *invocation_term_ref = enif_make_tuple4(script->env, 
+										  enif_make_atom(script->env,"erlv8_fun_invocation"),
+										  js_to_term(script->env, v8::Boolean::New(arguments.IsConstructCall())),
+										  js_to_term(script->env, arguments.Holder()),
+										  js_to_term(script->env, arguments.This()));
+										  
+  v8::Local<v8::Array> array = v8::Array::New(arguments.Length() + 2);
 
   array->Set(0, v8::External::New(resource_term_ref));
+  array->Set(1, v8::External::New(invocation_term_ref));
 
   for (signed int i=0;i<arguments.Length();i++) {
-      array->Set(i + 1,arguments[i]);
+      array->Set(i + 2,arguments[i]);
   }
   script->send(enif_make_tuple2(script->env,enif_make_copy(script->env,term),js_to_term(script->env,array)));
   script->waitForResult();
