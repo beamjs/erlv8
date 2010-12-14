@@ -118,6 +118,21 @@ term_to_js_boolean_test() ->
 	end,
 	stop().
 
+term_to_js_number_test() ->
+	start(),
+	{ok, Pid} = new_script(""),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:global(Pid,[{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}]),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, _} ->
+			?assertEqual([{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}],erlv8_script:global(Pid));
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 
 
 -endif.

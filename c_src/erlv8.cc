@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <cstring>
+#include <cmath>
 
 using namespace std;
 using namespace __gnu_cxx;
@@ -301,7 +302,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 };
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
-  int _int;
+  int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   if (enif_is_atom(env, term)) {
 	unsigned len;
 	enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);
@@ -319,7 +320,20 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	return result;
   } else if	(enif_get_int(env,term,&_int)) {
 	return v8::Local<v8::Integer>::New(v8::Integer::New(_int));
-  } else if (enif_is_empty_list(env,term)) {
+  } else if (enif_get_uint(env,term,&_uint)) {
+	return v8::Local<v8::Integer>::New(v8::Integer::NewFromUnsigned(_uint));
+  } else if (enif_get_long(env,term,&_long)) {
+	return v8::Local<v8::Number>::New(v8::Number::New(_long));
+  } else if (enif_get_ulong(env,term,&_ulong)) {
+	return v8::Local<v8::Number>::New(v8::Number::New(_ulong));
+  } else if (enif_get_int64(env,term,&_int64)) {
+	return v8::Local<v8::Number>::New(v8::Number::New(_int64));
+  } else if (enif_get_uint64(env,term,&_uint64)) {
+	return v8::Local<v8::Number>::New(v8::Number::New(_uint64));
+  } else if (enif_get_double(env,term,&_double)) {
+	return v8::Local<v8::Number>::New(v8::Number::New(_double));
+  } 
+  else if (enif_is_empty_list(env,term)) {
 	return v8::Local<v8::Object>::New(v8::Object::New());
   } else if (enif_is_proplist(env,term)) {
 	v8::Handle<v8::Object> obj = v8::Object::New();
@@ -379,6 +393,15 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
     return enif_make_string(env,*v8::String::AsciiValue(val->ToString()),ERL_NIF_LATIN1);
   } else if (val->IsInt32()) {
 	return enif_make_long(env,val->ToInt32()->Value());
+  } else if (val->IsUint32()) {
+	return enif_make_int64(env,val->ToUint32()->Value());
+  } else if (val->IsNumber()) {
+	double d = val->ToNumber()->Value();
+	if (d == round(d)) {
+	  return enif_make_int64(env,d);
+	} else {
+	  return enif_make_double(env,d);
+	}
   } else if (val->IsArray()) {
     v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(val);
 	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
