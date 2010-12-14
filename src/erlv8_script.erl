@@ -92,7 +92,7 @@ handle_call({global, Global}, _From, #state{ script = Script } = State) ->
 	{reply, Reply, State};
 
 handle_call(stop, _From, State) ->
-	{stop, shutdown, ok, State};
+	{stop, normal, ok, State};
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
