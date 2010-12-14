@@ -252,7 +252,6 @@ static ERL_NIF_TERM set_global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 		v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
 		global->Set(key,v8::Local<v8::Value>::New(new_global->Get(key)));
 	  }
-	  // TODO: aren't we supposed to destruct new_global?
 
 	  result = enif_make_atom(env,"ok");
 	}
@@ -301,7 +300,6 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 };
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
-  v8::HandleScope handle_scope;
   int _int;
   if (enif_get_int(env,term,&_int)) {
 	return v8::Local<v8::Integer>::New(v8::Integer::New(_int));
@@ -320,7 +318,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 	  current = tail;
 	}
-	return v8::Persistent<v8::Object>::New(obj);
+	return v8::Local<v8::Object>::New(obj);
   } else if (enif_is_list(env,term)) {
 	  // try it as a string
 	  unsigned len;
