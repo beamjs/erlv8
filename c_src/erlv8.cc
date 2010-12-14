@@ -189,6 +189,7 @@ static ERL_NIF_TERM register_module(ErlNifEnv *env, int argc, const ERL_NIF_TERM
 	char * name = (char *) malloc(len + 1);
 	enif_get_atom(env,argv[1],name,len + 1, ERL_NIF_LATIN1);
 	res->script->register_module(name,enif_make_copy(res->script->env,argv[2]));
+	free(name);
   } else {
 	return enif_make_badarg(env);
   };
