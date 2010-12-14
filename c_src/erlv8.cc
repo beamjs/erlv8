@@ -302,7 +302,22 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int;
-  if (enif_get_int(env,term,&_int)) {
+  if (enif_is_atom(env, term)) {
+	unsigned len;
+	enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);
+	char * name = (char *) malloc(len + 1);
+	enif_get_atom(env,term,name,len + 1, ERL_NIF_LATIN1);
+	v8::Handle<v8::Value> result;
+
+	// check for special atoms
+	if (strcmp(name,"false")==0) {
+	  result = v8::Local<v8::Boolean>::New(v8::Boolean::New(0));
+	} else if (strcmp(name,"true")==0) {
+	  result = v8::Local<v8::Boolean>::New(v8::Boolean::New(1));
+	}
+	free(name);
+	return result;
+  } else if	(enif_get_int(env,term,&_int)) {
 	return v8::Local<v8::Integer>::New(v8::Integer::New(_int));
   } else if (enif_is_empty_list(env,term)) {
 	return v8::Local<v8::Object>::New(v8::Object::New());
@@ -356,6 +371,10 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
     return enif_make_atom(env,"undefined");
   } else if (val->IsNull()) {
 	return enif_make_atom(env,"null");
+  } else if (val->IsTrue()) {
+	return enif_make_atom(env,"true");
+  } else if (val->IsFalse()) {
+	return enif_make_atom(env,"false");
   } else if (val->IsString()) {
     return enif_make_string(env,*v8::String::AsciiValue(val->ToString()),ERL_NIF_LATIN1);
   } else if (val->IsInt32()) {
@@ -392,7 +411,6 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   } else {
 	return enif_make_atom(env,"$unknown");
   }
-  return enif_make_badarg(env); // may this cause problems?
 };
 
 
