@@ -68,9 +68,9 @@ handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } 
 	Result = gen_event:add_handler(EventMgr,Handler,Args),
 	{reply, Result, State};
 
-handle_call({register, Mod}, _From, #state{ script = Script, mods = Mods} = State) ->
-	erlv8_nif:register(Script, Mod,Mod:exports()),
-	{reply, ok, State#state{ mods = [{Mod,Mod}|Mods] }};
+handle_call({register, Name, Mod}, _From, #state{ script = Script, mods = Mods} = State) when is_function(Mod)->
+	erlv8_nif:register(Script, Name, Mod()),
+	{reply, ok, State#state{ mods = [{Name,Mod}|Mods] }};
 
 handle_call({register, Name, Mod}, _From, #state{ script = Script, mods = Mods} = State) ->
 	erlv8_nif:register(Script, Name, Mod:exports()),
@@ -183,7 +183,7 @@ add_handler(Server, Handler, Args) ->
 	gen_server:call(Server, {add_handler, Handler, Args}).
 
 register(Server, Mod) ->
-	gen_server:call(Server, {register, Mod}).
+	gen_server:call(Server, Mod, Mod).
 
 register(Server, Name, Mod) ->
 	gen_server:call(Server, {register, Name, Mod}).
