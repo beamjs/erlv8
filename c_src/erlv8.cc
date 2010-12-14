@@ -9,7 +9,11 @@ using namespace std;
 using namespace __gnu_cxx;
 
 static v8::Persistent<v8::ObjectTemplate> global_template;
+
 static ErlNifResourceType * script_resource;
+static ErlNifResourceType * fun_resource;
+
+static ErlNifEnv * fun_holder_env;
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term); // fwd
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
@@ -32,6 +36,8 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
   return 1;
 }
 
+typedef enum { NONE, RESULT, NEXT_CALL} broadcasted;
+typedef struct _fun_res_t fun_res_t; //fwd
 class ErlScript {
 public:
   ErlNifEnv *caller_env;
@@ -43,13 +49,21 @@ public:
   ErlNifPid *server;
   ErlNifEnv *env;
 
+  fun_res_t *next_call;
+  ErlNifPid report_next_call;
+  ERL_NIF_TERM next_call_args;
+
   ERL_NIF_TERM result;
   ErlNifCond *result_cond;
   ErlNifMutex *result_cond_mtx;
 
+  broadcasted cond_broadcasted;
+
   
 
   ErlScript(ErlNifEnv * a_env, const char *a_buf, unsigned a_len) : caller_env(env), buf(a_buf), len(a_len) {
+	cond_broadcasted = NONE;
+	next_call = NULL;
 	env = enif_alloc_env();
 	result_cond = enif_cond_create((char *)"erlv8_result_condition");
 	result_cond_mtx = enif_mutex_create((char *)"erlv8_result_condition_mutex");
@@ -71,11 +85,22 @@ public:
   };
 
   void waitForResult() {
-	enif_cond_wait(result_cond,result_cond_mtx);
+	while (cond_broadcasted == NONE) { // according to erl_nif/driver documentation, enif_cond_wait might return before the cond was broadcasted
+	  enif_cond_wait(result_cond,result_cond_mtx);
+	}
+	// if (cond_broadcasted == RESULT)
+	//   result = enif_make_copy(env,result);
+	// if (cond_broadcasted == NEXT_CALL)
+	//   next_call_args = enif_make_copy(env,next_call_args);
+	cond_broadcasted = NONE;
   }
 
   void send(ERL_NIF_TERM term) {
-	enif_send(NULL, server, env, term);
+	send(server, term);
+  };
+
+  void send(ErlNifPid * pid, ERL_NIF_TERM term) {
+	enif_send(NULL, pid, env, term);
 	enif_clear_env(env);
   };
 
@@ -122,11 +147,16 @@ public:
 
 };
 
+
 typedef struct _script_res_t { 
   ErlScript * script;
 } script_res_t;
 
-
+typedef struct _fun_res_t { 
+  v8::Persistent<v8::Context> ctx;
+  v8::Function * fun;
+  ErlScript * script;
+} fun_res_t;
 
 static ERL_NIF_TERM new_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 {
@@ -210,8 +240,12 @@ static ERL_NIF_TERM script_send(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
 static ERL_NIF_TERM result(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   script_res_t *res;
   if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+
 	res->script->result = enif_make_copy(res->script->env,argv[1]);
+
+	res->script->cond_broadcasted = RESULT;
 	enif_cond_broadcast(res->script->result_cond);
+
 	return enif_make_atom(env,"ok");
   } else {
 	return enif_make_badarg(env);
@@ -264,6 +298,28 @@ static ERL_NIF_TERM set_global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   return result;
 };
 
+static ERL_NIF_TERM call(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  fun_res_t *res;
+  ERL_NIF_TERM result;
+  if (enif_get_resource(env,argv[0],fun_resource,(void **)(&res))) {
+	  res->script->next_call = res;
+	  ERL_NIF_TERM pid = enif_make_copy(res->script->env, argv[1]);
+	  enif_get_local_pid(res->script->env, pid, &res->script->report_next_call);
+
+	  res->script->next_call_args = enif_make_copy(res->script->env,argv[2]);
+
+	  res->script->cond_broadcasted = NEXT_CALL;
+	  enif_cond_broadcast(res->script->result_cond);
+
+	  result = enif_make_atom(env,"ok");
+  } else {
+	result = enif_make_badarg(env);
+  };
+  return result;
+};
+
+
+
 static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 1, new_script},
@@ -273,16 +329,18 @@ static ErlNifFunc nif_funcs[] =
   {"script_send", 2, script_send},
   {"result",2, result},
   {"get_global",1, get_global},
-  {"set_global",2, set_global}
+  {"set_global",2, set_global},
+  {"call",3, call}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
+
 
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   ErlScript * script = (ErlScript *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
-  ERL_NIF_TERM term = (ERL_NIF_TERM) arguments.Data()->ToInteger()->Value();
+  ERL_NIF_TERM term = enif_make_copy(script->env,(ERL_NIF_TERM) arguments.Data()->ToInteger()->Value());
 
   script_res_t *ptr = (script_res_t *)enif_alloc_resource(script_resource, sizeof(script_res_t));
   ptr->script = script;
@@ -305,10 +363,42 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   for (signed int i=0;i<arguments.Length();i++) {
       array->Set(i + 2,arguments[i]);
   }
-  script->send(enif_make_tuple2(script->env,enif_make_copy(script->env,term),js_to_term(script->env,array)));
-  script->waitForResult();
+
+  fun_res_t *next_call;
+  if ((next_call = script->next_call)) script->next_call = NULL;
+  
+
+  script->send(enif_make_tuple2(script->env,term,js_to_term(script->env,array)));
+  script->waitForResult(); 
+
+
+  if (next_call && !script->next_call) { // if it was a next_call, we need to report the result back (unless it is a call again)
+	script->send(&script->report_next_call,script->result);
+  }
+
+  while (script->next_call) { // it isn't the result yet, we just need to continue calling stuff
+	ERL_NIF_TERM head, tail;
+	ERL_NIF_TERM current = script->next_call_args;
+	unsigned int len;
+
+	enif_get_list_length(script->env,script->next_call_args,&len);
+
+	v8::Local<v8::Value> *args = NULL;
+	args = new v8::Local<v8::Value>[len];
+	int i = 0;
+	while (enif_get_list_cell(script->env, current, &head, &tail)) {
+	  args[i] = v8::Local<v8::Value>::New(term_to_js(script->env,head));
+	  i++; current = tail;
+	}
+	script->send(&script->report_next_call,js_to_term(script->env,script->next_call->fun->Call(script->next_call->ctx->Global(), len, args)));  
+	delete [] args;
+	args = NULL;
+  }
+
+
   return term_to_js(script->env,script->result);
 };
+
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
@@ -380,7 +470,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  }
 	  return v8::Local<v8::Object>::New(arr);
   } else if (enif_is_fun(env, term)) {
-    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::New(term));
+	ERL_NIF_TERM term2 = enif_make_copy(fun_holder_env,term);
+    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term2));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
   }
@@ -390,7 +481,20 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   v8::HandleScope handle_scope;
-  if (val->IsUndefined()) {
+  if (val->IsFunction()) {  // the reason why this check is so high up here is because it is also an object, so it should be before any object.
+	fun_res_t *ptr = (fun_res_t *)enif_alloc_resource(fun_resource, sizeof(fun_res_t));
+	ErlScript * script = (ErlScript *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+
+	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	ptr->fun = v8::Function::Cast(*val);
+	ptr->script = script;
+
+	ERL_NIF_TERM term = enif_make_tuple2(env,enif_make_atom(env,"erlv8_fun"), 
+										 enif_make_resource(env, ptr));
+	enif_release_resource(ptr);
+
+	return term;
+  } else if	(val->IsUndefined()) {
     return enif_make_atom(env,"undefined");
   } else if (val->IsNull()) {
 	return enif_make_atom(env,"null");
@@ -446,13 +550,16 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 };
 
 
-static void script_resource_destroy(ErlNifEnv* env, void* obj)
-{
-}
+static void script_resource_destroy(ErlNifEnv* env, void* obj) {};
+static void fun_resource_destroy(ErlNifEnv* env, void* obj) {
+};
 
 int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 {
-  script_resource = enif_open_resource_type(env, NULL, "erlv8_resource", script_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
+  script_resource = enif_open_resource_type(env, NULL, "erlv8_script_resource", script_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
+  fun_resource = enif_open_resource_type(env, NULL, "erlv8_fun_resource", fun_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
+  fun_holder_env = enif_alloc_env();
+
   v8::V8::Initialize();
   v8::HandleScope handle_scope;
 
@@ -467,6 +574,7 @@ void unload(ErlNifEnv *env, void* priv_data)
 {
   v8::Locker::StopPreemption();
   global_template.Dispose();
+  enif_free_env(fun_holder_env);
 };
 
 ERL_NIF_INIT(erlv8_nif,nif_funcs,load,NULL,NULL,unload)

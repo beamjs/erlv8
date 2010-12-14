@@ -121,8 +121,10 @@ handle_cast(_Msg, State) ->
 %% @end
 %%--------------------------------------------------------------------
 handle_info({F,A}, #state{ script = Script } = State) when is_function(F), is_list(A) ->
-	Result = erlang:apply(F,A),
-	erlv8_nif:result(Script, Result),
+	spawn(fun () ->
+				  Result = erlang:apply(F,A),
+				  erlv8_nif:result(Script, Result)
+		  end),
 	{noreply, State};
 handle_info({M, F, A}, State) ->
 	spawn(fun () ->
@@ -142,6 +144,7 @@ handle_info({finished, _Result}=Evt, #state{ event_mgr = EventMgr } = State) ->
 	gen_event:notify(EventMgr,Evt),
 	{noreply, State};
 handle_info(_Info, State) ->
+	io:format("something weird just happened ~p~n",[_Info]),
 	{noreply, State}.
 
 %%--------------------------------------------------------------------
@@ -175,7 +178,6 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 get_mod(M,#state{ mods = Mods }) ->
 	proplists:get_value(M,Mods,M).
-
 %%%===================================================================
 %%% Public functions
 %%%===================================================================
