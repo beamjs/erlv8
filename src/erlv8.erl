@@ -64,6 +64,21 @@ script_set_global_test() ->
 	end,
 	stop().
 
+term_to_js_object_test() ->
+	start(),
+	{ok, Pid} = new_script(""),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:global(Pid,[{"a",1},{"b","c"},{"c",[]}]),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, _} ->
+			?assertEqual([{"a",1},{"b","c"},{"c",[]}],erlv8_script:global(Pid));
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 
 
 -endif.
