@@ -389,6 +389,8 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	ERL_NIF_TERM term = *term_ref;
 	free(term_ref);
 	return term;
+  } else {
+	return enif_make_atom(env,"$unknown");
   }
   return enif_make_badarg(env); // may this cause problems?
 };
