@@ -92,7 +92,7 @@ handle_call({global, Global}, _From, #state{ script = Script } = State) ->
 	{reply, Reply, State};
 
 handle_call(stop, _From, State) ->
-	{stop, shutdown, State};
+	{stop, shutdown, ok, State};
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
@@ -161,7 +161,8 @@ handle_info(_Info, State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, _State) ->
+terminate(_Reason, #state{ event_mgr = EventMgr } = _State) ->
+	gen_event:stop(EventMgr),
 	ok.
 
 %%--------------------------------------------------------------------

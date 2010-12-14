@@ -35,6 +35,22 @@ valid_script_creation_test() ->
 	end,
 	stop().
 
+script_stopping_test() ->
+	start(),
+	{ok, Pid} = new_script(""),
+	?assert(is_pid(Pid)),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, _} ->
+			erlv8_script:stop(Pid),
+			?assertEqual(false,erlang:is_process_alive(Pid));
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 script_global_test() ->
 	start(),
 	{ok, Pid} = new_script("var a = 1+1;"),
