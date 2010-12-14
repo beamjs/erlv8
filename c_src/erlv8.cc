@@ -102,7 +102,8 @@ public:
 	  v8::Handle<v8::Script> compiled = v8::Script::Compile(script);
 	
 	if (compiled.IsEmpty()) {
-	  send(enif_make_atom(env,"compilation_failed"));
+	  send(enif_make_tuple2(env,enif_make_atom(env,"compilation_failed"),
+							js_to_term(env,try_catch.Exception())));
 	} else {
 	  send(enif_make_atom(env,"starting"));
 	  v8::Handle<v8::Value> value = compiled->Run();

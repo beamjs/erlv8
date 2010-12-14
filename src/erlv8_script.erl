@@ -130,11 +130,8 @@ handle_info({M, F, A}, State) ->
 		  end),
 	{noreply, State};
 %% TODO: make these events
-handle_info(compilation_failed, State) ->
-	Self = self(),
-	spawn(fun () ->
-				  error_logger:error_msg("Compilation failed:~s~n",[source(Self)])
-		  end),
+handle_info({compilation_failed, _Error}=Evt, #state{ event_mgr = EventMgr } = State) ->
+	gen_event:notify(EventMgr, Evt),
 	{noreply, State};
 handle_info(starting, State) ->
 	{noreply, State};

@@ -8,6 +8,10 @@
 init([Fun]) ->
     {ok, #state{f = Fun}}.
 
+handle_event({compilation_failed, _Error}=Evt, #state{ f = Fun } = State) ->
+	erlang:apply(Fun,[Evt]),
+    {ok, State};
+
 handle_event({exception, _Exception}=Evt, #state{ f = Fun } = State) ->
 	erlang:apply(Fun,[Evt]),
     {ok, State};
