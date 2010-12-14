@@ -9,11 +9,11 @@ endif
 
 all: compile 
 
-submodules:
+deps/v8/.git/config:
 	@git submodule init
 	@git submodule update
 
-deps/v8/libv8.a: submodules
+deps/v8/libv8.a: deps/v8/.git/config
 	@cd deps/v8 && scons $(V8FLAGS)
 
 dependencies: deps/v8/libv8.a
