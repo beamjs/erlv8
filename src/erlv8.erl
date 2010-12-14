@@ -139,7 +139,7 @@ invocation_test() ->
 	{ok, Pid} = new_script("test()"),
 	Self = self(),
 	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
-	erlv8_script:register(Pid, test, fun exports/0),
+	erlv8_script:register(Pid, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation) -> 123 end, F end),
 	erlv8_script:run(Pid),
 	receive 
 		{finished, 123} ->
@@ -148,10 +148,5 @@ invocation_test() ->
 			error({bad_result,Other})
 	end,
 	stop().
-
-exports() ->
-	A = fun (_Script, #erlv8_fun_invocation{} = _Invocation) -> 123 end,
-	A.
-
 
 -endif.
