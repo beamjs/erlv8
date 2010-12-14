@@ -1,4 +1,4 @@
-X64=$(shell file `which epmd` | grep x86_64 | wc -l | xargs echo)
+X64=$(shell file -L `which epmd` | grep x86_64 | wc -l | xargs echo)
 
 
 ifeq ($(X64),1)
