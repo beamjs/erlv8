@@ -232,6 +232,21 @@ fun_test() ->
 	end,
 	stop().
 
+fun_script_is_pid_test() ->
+	start(),
+	{ok, Pid} = new_script("test();"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:register(Pid, test, fun () -> F = fun (Script, #erlv8_fun_invocation{} = _Invocation) -> is_pid(Script) end, F end),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, true} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 fun_returning_fun_test() ->
 	start(),
 	{ok, Pid} = new_script("f = function() {}; test(f);"),

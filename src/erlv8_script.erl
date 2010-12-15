@@ -131,9 +131,10 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({F,A}, #state{ script = Script } = State) when is_function(F), is_list(A) ->
+handle_info({F,[_,Invocation|Args]}, #state{ script = Script } = State) when is_function(F), is_list(Args) ->
+	Self = self(),
 	spawn(fun () ->
-				  Result = erlang:apply(F,A),
+				  Result = erlang:apply(F,[Self,Invocation|Args]),
 				  erlv8_nif:result(Script, Result)
 		  end),
 	{noreply, State};
