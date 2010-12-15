@@ -262,4 +262,23 @@ fun_new_script_inside_test() ->
 	end,
 	stop().
 
+
+to_string_test() ->
+	start(),
+	{ok, Pid} = new_script(""),
+	?assertEqual("1",erlv8_script:to_string(Pid,1)),
+	?assertEqual("1",erlv8_script:to_string(Pid,"1")),
+	?assertEqual("true",erlv8_script:to_string(Pid,true)),
+	?assertEqual("[object Object]",erlv8_script:to_string(Pid,[])),
+	stop().
+
+to_detail_string_test() ->
+	start(),
+	{ok, Pid} = new_script(""),
+	?assertEqual("1",erlv8_script:to_string(Pid,1)),
+	?assertEqual("1",erlv8_script:to_string(Pid,"1")),
+	?assertEqual("true",erlv8_script:to_string(Pid,true)),
+	?assertEqual("[object Object]",erlv8_script:to_string(Pid,[])),
+	stop().
+
 -endif.

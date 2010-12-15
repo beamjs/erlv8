@@ -331,6 +331,36 @@ static ERL_NIF_TERM call(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   return result;
 };
 
+static ERL_NIF_TERM to_string(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->script->context);
+	  
+	  return js_to_term(env,term_to_js(env,argv[1])->ToString());
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+static ERL_NIF_TERM to_detail_string(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->script->context);
+	  
+	  return js_to_term(env,term_to_js(env,argv[1])->ToDetailString());
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
 
 
 static ErlNifFunc nif_funcs[] =
@@ -344,7 +374,9 @@ static ErlNifFunc nif_funcs[] =
   {"result",2, result},
   {"get_global",1, get_global},
   {"set_global",2, set_global},
-  {"call",3, call}
+  {"call",3, call},
+  {"to_string",2, to_string},
+  {"to_detail_string",2, to_detail_string}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()

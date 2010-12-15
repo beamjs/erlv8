@@ -1,7 +1,7 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([new_script/1,get_script/1,set_script/2,run/2,register/3,script_send/2,result/2,get_global/1,set_global/2,call/3]).
+-export([new_script/1,get_script/1,set_script/2,run/2,register/3,script_send/2,result/2,get_global/1,set_global/2,call/3,to_string/2,to_detail_string/2]).
 
 init() ->
 	case os:getenv("ERLV8_SO_PATH") of
@@ -46,4 +46,10 @@ set_global(_ScriptObject,_Global) ->
 	error(not_loaded).
 
 call(_Resource,_Pid,_Args) ->
+	error(not_loaded).
+
+to_string(_ScriptObject,_Obj) ->
+	error(not_loaded).
+
+to_detail_string(_ScriptObject,_Obj) ->
 	error(not_loaded).
