@@ -383,7 +383,9 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   
 
   script->send(enif_make_tuple2(script->env,term,js_to_term(script->env,array)));
+  v8::Unlocker unlocker;
   script->waitForResult(); 
+  v8::Locker locker;
 
 
   if (next_call && !script->next_call) { // if it was a next_call, we need to report the result back (unless it is a call again)
