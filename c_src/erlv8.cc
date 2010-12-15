@@ -188,6 +188,23 @@ static ERL_NIF_TERM get_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   return enif_make_badarg(env);
 };
 
+static ERL_NIF_TERM set_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
+{
+  script_res_t *res;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	unsigned len;
+	enif_get_list_length(env, argv[1], &len);
+	char * buf = (char *) malloc(len + 1);
+	enif_get_string(env,argv[1],buf,len + 1, ERL_NIF_LATIN1);
+	res->script->buf = reinterpret_cast<const char *>(buf);
+	res->script->len = len;
+
+	return enif_make_atom(env,"ok");
+  };
+  return enif_make_badarg(env);
+
+};
+
 
 void * run_script(void *data) {
   Script *escript = reinterpret_cast<Script *>(data);
@@ -324,6 +341,7 @@ static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 1, new_script},
   {"get_script", 1, get_script},
+  {"set_script", 2, set_script},
   {"run", 2, run},
   {"register", 3, register_module},
   {"script_send", 2, script_send},

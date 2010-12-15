@@ -30,6 +30,43 @@ valid_script_creation_test() ->
 	end,
 	stop().
 
+script_change_before_start_test() ->
+	start(),
+	{ok, Pid} = new_script("1+1;"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:source(Pid,"2+2;"),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, 4} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
+script_change_rerun_test() ->
+	start(),
+	{ok, Pid} = new_script("1+1;"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, 2} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
+	erlv8_script:source(Pid,"2+2;"),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, 4} ->
+			ok;
+		Other1 ->
+			error({bad_result,Other1})
+	end,
+	stop().
+
 compilation_error_test() ->
 	start(),
 	{ok, Pid} = new_script("1+;"),
