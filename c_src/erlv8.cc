@@ -150,7 +150,7 @@ typedef struct _script_res_t {
 
 typedef struct _fun_res_t { 
   v8::Persistent<v8::Context> ctx;
-  v8::Function * fun;
+  v8::Persistent<v8::Function> fun;
   Script * script;
 } fun_res_t;
 
@@ -487,8 +487,28 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		i++; current = tail;
 	  }
 	  return v8::Local<v8::Object>::New(arr);
+  } else if (enif_is_tuple(env, term)) {
+	// check if it is a v8_fun
+	ERL_NIF_TERM *array;
+	int arity;
+	enif_get_tuple(env,term,&arity,(const ERL_NIF_TERM **)&array);
+	if (arity == 2) {
+	  unsigned len;
+	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
+	  char * name = (char *) malloc(len + 1);
+	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  fun_res_t *res;
+	  int isv8fun = strcmp(name,"erlv8_fun")==0;
+	  free(name);
+	  if ((isv8fun) &&
+		  (enif_get_resource(env,array[1],fun_resource,(void **)(&res)))){
+		return res->fun;
+	  }
+	}
+
   } else if (enif_is_fun(env, term)) {
 	ERL_NIF_TERM term2 = enif_make_copy(fun_holder_env,term);
+
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term2));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
@@ -504,7 +524,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	Script * script = (Script *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
 	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-	ptr->fun = v8::Function::Cast(*val);
+	ptr->fun = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
 	ptr->script = script;
 
 	ERL_NIF_TERM term = enif_make_tuple2(env,enif_make_atom(env,"erlv8_fun"), 

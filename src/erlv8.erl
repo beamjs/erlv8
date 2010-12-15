@@ -232,6 +232,21 @@ fun_test() ->
 	end,
 	stop().
 
+fun_returning_fun_test() ->
+	start(),
+	{ok, Pid} = new_script("f = function() {}; test(f);"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:register(Pid, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,Val) -> Val end, F end),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, {erlv8_fun, _}} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 fun_new_script_inside_test() ->
 	start(),
 	{ok, Pid} = new_script("test()"),
