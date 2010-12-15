@@ -428,6 +428,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  result = v8::Local<v8::Boolean>::New(v8::Boolean::New(0));
 	} else if (strcmp(name,"true")==0) {
 	  result = v8::Local<v8::Boolean>::New(v8::Boolean::New(1));
+	} else if (strcmp(name,"undefined")==0) {
+	  result = v8::Undefined();
 	}
 	free(name);
 	return result;
