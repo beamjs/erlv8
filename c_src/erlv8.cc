@@ -154,6 +154,7 @@ public:
 	  next_call = NULL;
 	  v8::Unlocker unlocker;
 	  waitForResult(); 
+	  if (!next_call) continue;
 	  v8::Locker locker;
 	  v8::HandleScope handle_scope;
 	  
