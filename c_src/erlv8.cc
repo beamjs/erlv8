@@ -38,7 +38,7 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 
 typedef enum { NONE, RESULT, NEXT_CALL} broadcasted;
 typedef struct _fun_res_t fun_res_t; //fwd
-class ErlScript {
+class Script {
 public:
   ErlNifEnv *caller_env;
   const char *buf;
@@ -61,7 +61,7 @@ public:
 
   
 
-  ErlScript(ErlNifEnv * a_env, const char *a_buf, unsigned a_len) : caller_env(env), buf(a_buf), len(a_len) {
+  Script(ErlNifEnv * a_env, const char *a_buf, unsigned a_len) : caller_env(env), buf(a_buf), len(a_len) {
 	cond_broadcasted = NONE;
 	next_call = NULL;
 	env = enif_alloc_env();
@@ -77,7 +77,7 @@ public:
 	}
   };
 
-  ~ErlScript() { 
+  ~Script() { 
 	context.Dispose();
 	enif_free_env(env);
 	enif_cond_destroy(result_cond);
@@ -149,13 +149,13 @@ public:
 
 
 typedef struct _script_res_t { 
-  ErlScript * script;
+  Script * script;
 } script_res_t;
 
 typedef struct _fun_res_t { 
   v8::Persistent<v8::Context> ctx;
   v8::Function * fun;
-  ErlScript * script;
+  Script * script;
 } fun_res_t;
 
 static ERL_NIF_TERM new_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
@@ -167,7 +167,7 @@ static ERL_NIF_TERM new_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   char * script = (char *) malloc(len + 1);
   enif_get_string(env,argv[0],script,len + 1, ERL_NIF_LATIN1);
 
-  ErlScript *escript = new ErlScript(env, reinterpret_cast<const char *>(script),len);
+  Script *escript = new Script(env, reinterpret_cast<const char *>(script),len);
 
   script_res_t *ptr = (script_res_t *)enif_alloc_resource(script_resource, sizeof(script_res_t));
   ptr->script = escript;
@@ -190,7 +190,7 @@ static ERL_NIF_TERM get_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 
 
 void * run_script(void *data) {
-  ErlScript *escript = reinterpret_cast<ErlScript *>(data);
+  Script *escript = reinterpret_cast<Script *>(data);
   escript->run();
   return NULL;
 };
@@ -338,7 +338,7 @@ static ErlNifFunc nif_funcs[] =
 
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
-  ErlScript * script = (ErlScript *)__ERLV8__(v8::Context::GetCurrent()->Global());
+  Script * script = (Script *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
   ERL_NIF_TERM term = enif_make_copy(script->env,(ERL_NIF_TERM) arguments.Data()->ToInteger()->Value());
 
@@ -483,7 +483,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   v8::HandleScope handle_scope;
   if (val->IsFunction()) {  // the reason why this check is so high up here is because it is also an object, so it should be before any object.
 	fun_res_t *ptr = (fun_res_t *)enif_alloc_resource(fun_resource, sizeof(fun_res_t));
-	ErlScript * script = (ErlScript *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	Script * script = (Script *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
 	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 	ptr->fun = v8::Function::Cast(*val);
