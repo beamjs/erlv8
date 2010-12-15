@@ -134,6 +134,21 @@ term_to_js_number_test() ->
 	end,
 	stop().
 
+term_to_js_fun_test() ->
+	start(),
+	{ok, Pid} = new_script("x = function () {}"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:global(Pid,[]),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, _} ->
+			?assertMatch([{"x",{erlv8_fun,_}}],erlv8_script:global(Pid));
+		Other ->
+			error({bad_result,Other})
+	end,
+	stop().
+
 invocation_test() ->
 	start(),
 	{ok, Pid} = new_script("test()"),
@@ -149,7 +164,7 @@ invocation_test() ->
 	end,
 	stop().
 
-fun_passing_test() ->
+fun_test() ->
 	start(),
 	{ok, Pid} = new_script("f = function() { return test(321) }; test0(f);"),
 	Self = self(),
