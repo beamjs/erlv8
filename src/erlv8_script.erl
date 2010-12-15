@@ -73,7 +73,7 @@ handle_call({register, Name, Mod}, _From, #state{ script = Script, mods = Mods} 
 	{reply, ok, State#state{ mods = [{Name,Mod}|Mods] }};
 
 handle_call({register, Name, Mod}, From, State) ->
-	handle_call({register, Name, Mod:exports()}, From, State);
+	handle_call({register, Name, fun () -> Mod:exports() end}, From, State);
 
 handle_call(source, _From, #state{ script = Script } = State) ->
 	Reply = erlv8_nif:get_script(Script),
