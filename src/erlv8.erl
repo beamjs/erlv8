@@ -292,6 +292,32 @@ fun_new_script_inside_test() ->
 	end,
 	stop().
 
+fun_callback_test() ->
+	start(),
+	{ok, Pid} = new_script("f = function() { return 1}; test(f);"),
+	Self = self(),
+	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
+	erlv8_script:register(Pid, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, Cb) -> 
+														   spawn(fun () ->
+																		 timer:sleep(1000), %% allow ample time
+																		 Self ! {ok, Cb:call()}
+																 end)
+												   end, F end),
+	erlv8_script:run(Pid),
+	receive 
+		{finished, _} ->
+			ok;
+		Other ->
+			error({bad_result,Other})
+	end,
+	receive
+		{ok, 1} ->
+			ok;
+		Other1 ->
+			error({bad_result,Other1})
+	end,
+	stop().
+
 
 to_string_test() ->
 	start(),
