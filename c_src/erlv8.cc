@@ -88,10 +88,6 @@ public:
 	while (cond_broadcasted == NONE) { // according to erl_nif/driver documentation, enif_cond_wait might return before the cond was broadcasted
 	  enif_cond_wait(result_cond,result_cond_mtx);
 	}
-	// if (cond_broadcasted == RESULT)
-	//   result = enif_make_copy(env,result);
-	// if (cond_broadcasted == NEXT_CALL)
-	//   next_call_args = enif_make_copy(env,next_call_args);
 	cond_broadcasted = NONE;
   }
 
