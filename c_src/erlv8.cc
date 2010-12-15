@@ -653,6 +653,9 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 
 static void script_resource_destroy(ErlNifEnv* env, void* obj) {};
 static void fun_resource_destroy(ErlNifEnv* env, void* obj) {
+  fun_res_t * res = reinterpret_cast<fun_res_t *>(obj);
+  res->ctx.Dispose();
+  res->fun.Dispose();
 };
 
 int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
