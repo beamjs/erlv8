@@ -233,10 +233,10 @@ invocation_test() ->
 
 fun_test() ->
 	start(),
-	{ok, Pid} = new_script("f = function() { return test(321) }; test0(f);"),
+	{ok, Pid} = new_script("f = function(x) { return test(x) }; test0(f);"),
 	Self = self(),
 	erlv8_script:add_handler(Pid,erlv8_capturer,[fun (X) -> Self ! X end]),
-	erlv8_script:register(Pid, test0, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, F) -> F:call() end, F end),
+	erlv8_script:register(Pid, test0, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, F) -> F:call([321]) end, F end),
 	erlv8_script:register(Pid, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,Val) -> Val end, F end),
 	erlv8_script:run(Pid),
 	receive 
