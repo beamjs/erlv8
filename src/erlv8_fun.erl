@@ -1,13 +1,8 @@
--module(erlv8_fun,[Resource]).
+-module(erlv8_fun,[Resource,Script]).
 -export([call/0,call/1]).
 
 call() ->
 	call([]).
 
 call(Args) ->
-	erlv8_nif:call(Resource,self(),Args),
-	receive
-		X ->
-			X
-	end.
-	   
+	erlv8_script:next_tick(Script, {call, Resource, Args}).

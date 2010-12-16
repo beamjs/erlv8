@@ -3,6 +3,8 @@
   {description, "Erlang V8 interface"},
   {vsn, "0.1"},
   {registered, []},
+  {modules, [gen_server2, priority_queue,
+			 erlv8, erlv8_app, erlv8_fun, erlv8_script, erlv8_capturer, erlv8_nif, erlv8_sup]},
   {applications, [
                   kernel,
                   stdlib
