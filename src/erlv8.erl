@@ -100,36 +100,36 @@ term_to_js_fun_test() ->
 invocation_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation) -> 123 end, F end),
+	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,[]) -> 123 end, F end),
 	?assertEqual({ok, 123}, erlv8_script:run(Script,"test()")),
 	stop().
 
 fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:register(Script, test0, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, F) -> F:call([321]) end, F end),
-	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,Val) -> Val end, F end),
+	erlv8_script:register(Script, test0, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, [F]) -> F:call([321]) end, F end),
+	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
 	?assertEqual({ok, 321}, erlv8_script:run(Script,"f = function(x) { return test(x) }; test0(f);")),
 	stop().
 
 fun_script_is_pid_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:register(Script, test, fun () -> F = fun (Script1, #erlv8_fun_invocation{} = _Invocation) -> is_pid(Script1) end, F end),
+	erlv8_script:register(Script, test, fun () -> F = fun (Script1, #erlv8_fun_invocation{} = _Invocation,[]) -> is_pid(Script1) end, F end),
 	?assertEqual({ok, true}, erlv8_script:run(Script,"test();")),
 	stop().
 
 fun_returning_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,Val) -> Val end, F end),
+	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
 	?assertMatch({ok, {erlv8_fun, _, Script}}, erlv8_script:run(Script,"f = function() {}; test(f);")),
 	stop().
 
 fun_new_script_inside_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation) -> {ok, _Pid} = erlv8_script:new(), 321 end, F end),
+	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,[]) -> {ok, _Pid} = erlv8_script:new(), 321 end, F end),
 	?assertEqual({ok, 321},erlv8_script:run(Script, "test()")),
 	stop().
 
@@ -138,7 +138,7 @@ fun_callback_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	Self = self(),
-	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, Cb) -> 
+	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation, [Cb]) -> 
 														   spawn(fun () ->
 																		 timer:sleep(1000), %% allow ample time
 																		 Self ! {ok, Cb:call([1])}

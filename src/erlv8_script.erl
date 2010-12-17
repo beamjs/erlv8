@@ -174,7 +174,7 @@ handle_info(tick_me, #state{ script = Script, ticks = Ticks, ticked = Ticked } =
 handle_info({F,Ref,Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
-				  Result = erlang:apply(F,[Self,Invocation|Args]),
+				  Result = erlang:apply(F,[Self,Invocation,Args]),
 				  next_tick(Self, {result, Ref, Result})
 		  end),
 	{noreply, State};
