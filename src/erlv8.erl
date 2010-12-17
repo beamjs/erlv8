@@ -121,6 +121,19 @@ term_to_js_object_fun_test() ->
 	?assertMatch({ok, 123}, erlv8_script:run(Script,"x()")),
 	stop().
 
+object_fun_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	{ok, Fun} = erlv8_script:run(Script,"f = function() {}; f.y = 1; f"),
+	?assertEqual([{"y",1}],Fun:object()),
+	stop().
+
+
+funobj_test() ->
+	FunObj = erlv8_funobj:new(fun (_, #erlv8_fun_invocation{},[]) -> 123 end, [{"y",1}]),
+	?assertEqual([{"y",1}],FunObj:object()).
+	
+
 invocation_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
