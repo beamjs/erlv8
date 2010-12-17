@@ -549,30 +549,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		  (enif_get_resource(env,array[1],fun_resource,(void **)(&res)))){
 		return res->fun;
 	  }
-	}
-
-	if (arity == 3) { // check if it is erlv8_funobj
-	  unsigned len;
-	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
-	  char * name = (char *) malloc(len + 1);
-	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
-	  int isv8funobj = strcmp(name,"erlv8_funobj")==0;
-	  free(name);
-	  if (isv8funobj && enif_is_fun(env, array[1]) && enif_is_list(env,array[2])) {
-		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env, array[1])); 
-		ERL_NIF_TERM head, tail;
-		ERL_NIF_TERM current = array[2];
-		while (enif_get_list_cell(env, current, &head, &tail)) {
-		  int arity;
-		  ERL_NIF_TERM *keyval;
-		  enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&keyval);
-		  if (arity == 2) {
-			f->Set(term_to_js(env,keyval[0]),term_to_js(env,keyval[1]));
-		  }
-		  current = tail;
-		}
-		return f;
-	  }
+	  
 	}
 	if (arity == 2) { 
 	  unsigned len;
@@ -635,26 +612,18 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	ptr->fun = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
 	ptr->script = script;
 
-    v8::Handle<v8::Object> funobj = v8::Handle<v8::Function>::Cast(val);
-	v8::Handle<v8::Array> keys = funobj->GetPropertyNames();
-
-	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
-	for (unsigned int i=0;i<keys->Length();i++) {
-	  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
-
-	  arr[i] = enif_make_tuple(env,2,
-							   js_to_term(env,v8::Handle<v8::String>::Cast(key)),
-							   js_to_term(env,funobj->Get(key)));
-	}
-	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,keys->Length());
-	free(arr);
+	obj_res_t *ptr1 = (obj_res_t *)enif_alloc_resource(obj_resource, sizeof(obj_res_t));
+	ptr1->obj = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
+	ptr1->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 
 	ERL_NIF_TERM term = enif_make_tuple4(env,enif_make_atom(env,"erlv8_fun"), 
 										 enif_make_resource(env, ptr),
 										 enif_make_pid(env, script->server),
-										 list
-										 );
+										 enif_make_tuple2(env,
+														  enif_make_atom(env,"erlv8_object"),
+														  enif_make_resource(env, ptr1)));
 	enif_release_resource(ptr);
+	enif_release_resource(ptr1);
 
 	return term;
   } else if	(val->IsUndefined()) {

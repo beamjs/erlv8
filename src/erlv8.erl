@@ -125,7 +125,8 @@ js_to_term_fun_test() ->
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:run(Script,"x = function () {}"),
 	Global = erlv8_script:global(Script),
-	?assertMatch([{"x",{erlv8_fun,_,Script,[]}}],Global:proplist()),
+	{erlv8_fun,_,Script, X} = Global:get_value("x"),
+	?assertEqual([],X:proplist()),
 	stop().
 
 js_object_to_term_fun_test() ->
@@ -133,25 +134,33 @@ js_object_to_term_fun_test() ->
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:run(Script,"x = function () {}; x.a = 1"),
 	Global = erlv8_script:global(Script),
-	?assertMatch([{"x",{erlv8_fun,_,Script,[{"a",1}]}}],Global:proplist()),
+	{erlv8_fun, _, Script, O} = Global:get_value("x"),
+	?assertEqual([{"a",1}],O:proplist()),
 	stop().
 
 term_to_js_object_fun_erlv8_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	{ok, Fun} = erlv8_script:run(Script,"x = function () {}; x.a = 1; x"),
-	?assertMatch({erlv8_fun,_,Script,[{"a",1}]},Fun),
 	Global = erlv8_script:global(Script),
+	{ok, {erlv8_fun,_, Script, O}=Fun} = erlv8_script:run(Script,"x = function () {}; x.a = 1; x"),
+	?assertEqual([{"a",1}],O:proplist()),
 	Global:set_value("y",Fun),
-	?assertMatch({ok, 1}, erlv8_script:run(Script,"y.a")),
+	Y = Global:get_value("y"),
+	YObj = Y:object(),
+	?assertEqual(1, YObj:get_value("a")),
 	stop().
 
 term_to_js_object_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	Global = erlv8_script:global(Script),
-	Global:set_value("x",erlv8_funobj:new(fun (#erlv8_fun_invocation{},[]) -> 123 end, [{"y",1}])),
+	Global:set_value("x",fun (#erlv8_fun_invocation{},[]) -> 123 end),
+	X = Global:get_value("x"),
+	XObj = X:object(),
+	XObj:set_value("y",1),
 	?assertMatch({ok, 1}, erlv8_script:run(Script,"x.y")),
+	X0 = Global:get_value("x"), X1 = X0:object(),
+	?assertMatch(1, X1:get_value("y")),
 	?assertMatch({ok, 123}, erlv8_script:run(Script,"x()")),
 	stop().
 
@@ -170,14 +179,10 @@ object_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	{ok, Fun} = erlv8_script:run(Script,"f = function() {}; f.y = 1; f"),
-	?assertEqual([{"y",1}],Fun:object()),
+	FunObj = Fun:object(),
+	?assertEqual([{"y",1}],FunObj:proplist()),
 	stop().
 
-
-funobj_test() ->
-	FunObj = erlv8_funobj:new(fun (#erlv8_fun_invocation{},[]) -> 123 end, [{"y",1}]),
-	?assertEqual([{"y",1}],FunObj:object()).
-	
 
 invocation_test() ->
 	start(),
@@ -205,7 +210,8 @@ fun_returning_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:register(Script, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
-	?assertMatch({ok, {erlv8_fun, _, Script, []}}, erlv8_script:run(Script,"f = function() {}; test(f);")),
+	{ok, {erlv8_fun, _, Script, O}} = erlv8_script:run(Script,"f = function() {}; test(f);"),
+	?assertEqual([],O:proplist()),
 	stop().
 
 fun_new_script_inside_test() ->
