@@ -94,7 +94,31 @@ js_to_term_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:run(Script,"x = function () {}"),
-	?assertMatch([{"x",{erlv8_fun,_,Script}}],erlv8_script:global(Script)),
+	?assertMatch([{"x",{erlv8_fun,_,Script,[]}}],erlv8_script:global(Script)),
+	stop().
+
+js_object_to_term_fun_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:run(Script,"x = function () {}; x.a = 1"),
+	?assertMatch([{"x",{erlv8_fun,_,Script,[{"a",1}]}}],erlv8_script:global(Script)),
+	stop().
+
+term_to_js_object_fun_erlv8_fun_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	{ok, Fun} = erlv8_script:run(Script,"x = function () {}; x.a = 1; x"),
+	?assertMatch({erlv8_fun,_,Script,[{"a",1}]},Fun),
+	erlv8_script:global(Script,[{"y",Fun}]),
+	?assertMatch({ok, 1}, erlv8_script:run(Script,"y.a")),
+	stop().
+
+term_to_js_object_fun_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"x",erlv8_funobj:new(fun (_, #erlv8_fun_invocation{},[]) -> 123 end, [{"y",1}])}]),
+	?assertMatch({ok, 1}, erlv8_script:run(Script,"x.y")),
+	?assertMatch({ok, 123}, erlv8_script:run(Script,"x()")),
 	stop().
 
 invocation_test() ->
@@ -123,7 +147,7 @@ fun_returning_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
-	?assertMatch({ok, {erlv8_fun, _, Script}}, erlv8_script:run(Script,"f = function() {}; test(f);")),
+	?assertMatch({ok, {erlv8_fun, _, Script, []}}, erlv8_script:run(Script,"f = function() {}; test(f);")),
 	stop().
 
 fun_new_script_inside_test() ->
@@ -132,7 +156,6 @@ fun_new_script_inside_test() ->
 	erlv8_script:register(Script, test, fun () -> F = fun (_Script, #erlv8_fun_invocation{} = _Invocation,[]) -> {ok, _Pid} = erlv8_script:new(), 321 end, F end),
 	?assertEqual({ok, 321},erlv8_script:run(Script, "test()")),
 	stop().
-
 
 fun_callback_test() ->
 	start(),

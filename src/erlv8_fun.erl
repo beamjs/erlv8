@@ -1,4 +1,4 @@
--module(erlv8_fun,[Resource,Script]).
+-module(erlv8_fun,[Resource,Script,Object]).
 -export([call/0,call/1]).
 
 call() ->

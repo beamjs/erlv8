@@ -494,11 +494,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  }
 	  return v8::Local<v8::Object>::New(arr);
   } else if (enif_is_tuple(env, term)) {
-	// check if it is a v8_fun
 	ERL_NIF_TERM *array;
 	int arity;
 	enif_get_tuple(env,term,&arity,(const ERL_NIF_TERM **)&array);
-	if (arity == 3) {
+	if (arity == 4) { 	// check if it is a v8_fun
 	  unsigned len;
 	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
 	  char * name = (char *) malloc(len + 1);
@@ -511,6 +510,31 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		return res->fun;
 	  }
 	}
+
+	if (arity == 3) { // check if it is erlv8_funobj
+	  unsigned len;
+	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
+	  char * name = (char *) malloc(len + 1);
+	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  int isv8funobj = strcmp(name,"erlv8_funobj")==0;
+	  free(name);
+	  if (isv8funobj && enif_is_fun(env, array[1]) && enif_is_list(env,array[2])) {
+		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env, array[1])); 
+		ERL_NIF_TERM head, tail;
+		ERL_NIF_TERM current = array[2];
+		while (enif_get_list_cell(env, current, &head, &tail)) {
+		  int arity;
+		  ERL_NIF_TERM *keyval;
+		  enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&keyval);
+		  if (arity == 2) {
+			f->Set(term_to_js(env,keyval[0]),term_to_js(env,keyval[1]));
+		  }
+		  current = tail;
+		}
+		return f;
+	  }
+	}
+	
 
   } else if (enif_is_fun(env, term)) {
 	ERL_NIF_TERM term2 = enif_make_copy(fun_holder_env,term);
@@ -533,9 +557,25 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	ptr->fun = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
 	ptr->script = script;
 
-	ERL_NIF_TERM term = enif_make_tuple3(env,enif_make_atom(env,"erlv8_fun"), 
+    v8::Handle<v8::Object> funobj = v8::Handle<v8::Function>::Cast(val);
+	v8::Handle<v8::Array> keys = funobj->GetPropertyNames();
+
+	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
+	for (unsigned int i=0;i<keys->Length();i++) {
+	  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
+
+	  arr[i] = enif_make_tuple(env,2,
+							   js_to_term(env,v8::Handle<v8::String>::Cast(key)),
+							   js_to_term(env,funobj->Get(key)));
+	}
+	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,keys->Length());
+	free(arr);
+
+	ERL_NIF_TERM term = enif_make_tuple4(env,enif_make_atom(env,"erlv8_fun"), 
 										 enif_make_resource(env, ptr),
-										 enif_make_pid(env, script->server));
+										 enif_make_pid(env, script->server),
+										 list
+										 );
 	enif_release_resource(ptr);
 
 	return term;
