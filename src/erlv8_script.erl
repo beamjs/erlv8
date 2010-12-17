@@ -299,7 +299,10 @@ add_handler(Server, Handler, Args) ->
 	gen_server2:call(Server, {add_handler, Handler, Args}).
 
 register(Server, Mod) when is_atom(Mod) ->
-	register(Server, Mod, fun () -> Mod:exports() end).
+	register(Server, Mod, Mod).
+
+register(Server, Name, Mod) when is_atom(Mod) ->
+	register(Server, Name, Mod:exports());
 
 register(Server, Name, Mod) when is_function(Mod) ->
 	G0 = global(Server),
