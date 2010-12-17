@@ -188,7 +188,7 @@ handle_info(tick_me, #state{ script = Script, ticks = Ticks, ticked = Ticked } =
 handle_info({F,#erlv8_fun_invocation{ ref = Ref, this = IThis } = Invocation,Args}, #state{ this = This, globals = Globals } = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
-				  Result = erlang:apply(F,[Self,Invocation,Args]),
+				  Result = erlang:apply(F,[Invocation,Args]),
 				  next_tick(Self, {result, Ref, Result, proplists:get_value(Ref, This, IThis)}),
 				  global(Self, proplists:get_value(Ref, Globals, global(Self))),
 				  gen_server2:cast({this, Ref, delete}),

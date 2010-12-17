@@ -424,7 +424,8 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   ERL_NIF_TERM ref = enif_make_ref(script->env);
   // send invocation request
   SEND(script->server,
-	   enif_make_tuple3(send.env,enif_make_copy(send.env,term),
+	   enif_make_tuple3(send.env,
+						enif_make_copy(send.env,term),
 						enif_make_tuple6(send.env, 
 										 enif_make_atom(send.env,"erlv8_fun_invocation"),
 										 enif_make_atom(send.env,arguments.IsConstructCall() ? "true" : "false"),
