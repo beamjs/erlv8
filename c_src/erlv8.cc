@@ -548,6 +548,19 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  if ((isv8fun) &&
 		  (enif_get_resource(env,array[1],fun_resource,(void **)(&res)))){
 		return res->fun;
+	  } else if ((isv8fun) && (enif_is_fun(env, array[1]))) {
+		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env,array[1]));
+		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(env,array[3]));
+		
+		v8::Handle<v8::Array> keys = o->GetPropertyNames();
+
+		for (unsigned int i=0;i<keys->Length();i++) {
+		  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
+		  f->Set(key,o->Get(key));
+		}
+	  
+	    return f;
+
 	  }
 	  
 	}

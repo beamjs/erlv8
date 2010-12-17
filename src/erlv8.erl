@@ -183,6 +183,15 @@ object_fun_test() ->
 	?assertEqual([{"y",1}],FunObj:proplist()),
 	stop().
 
+fun_obj_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	Global = erlv8_script:global(Script),
+	Global:set_value("f", erlv8_fun:new(fun (#erlv8_fun_invocation{},[]) -> 1 end, erlv8_object:new([{"a",1}]))),
+	F = Global:get_value("f"),
+	FObj = F:object(),
+	?assertEqual(1,FObj:get_value("a")),
+	stop().
 
 invocation_test() ->
 	start(),
