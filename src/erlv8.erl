@@ -173,6 +173,18 @@ fun_is_construct_call_test() ->
 	?assertEqual({ok, true}, erlv8_script:run(Script,"new x().icc")),
 	stop().
 
+fun_global_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"a", 1}, {"x",fun (_, #erlv8_fun_invocation{}=I,[]) -> 
+													   G0 = I:global(),
+													   G1 = [{"a", 2}, proplists:delete("a", G0)],
+													   I:global(G1)
+											   end}]),
+	erlv8_script:run(Script,"x()"),
+	?assertMatch([{"a",1},{"x", _}], erlv8_script:global(Script)),
+	stop().
+
 fun_callback_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
