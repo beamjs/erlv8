@@ -160,22 +160,17 @@ fun_new_script_inside_test() ->
 fun_this_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"x",erlv8_funobj:new(fun (_, #erlv8_fun_invocation{ this = This },[]) -> This end, [{"y",1}])}]),
+	erlv8_script:global(Script,[{"x",erlv8_funobj:new(fun (_, #erlv8_fun_invocation{}=I,[]) -> I:this() end, [{"y",1}])}]),
 	?assertEqual({ok, erlv8_script:global(Script)}, erlv8_script:run(Script,"x()")),
 	stop().
 
 fun_is_construct_call_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	Self = self(),
-	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{ is_construct_call = ICC },[]) -> ICC end}]),
+	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{}=I,[]) -> I:is_construct_call() end}]),
 	?assertEqual({ok, false}, erlv8_script:run(Script,"x()")),
-	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{ is_construct_call = ICC },[]) -> Self ! ICC end}]),
-	erlv8_script:run(Script,"new x()"),
-	receive 
-		X ->
-			?assertEqual(true, X)
-	end,
+	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{}=I,[]) -> I:this([{"icc",I:is_construct_call()}]) end}]),
+	?assertEqual({ok, true}, erlv8_script:run(Script,"new x().icc")),
 	stop().
 
 fun_callback_test() ->

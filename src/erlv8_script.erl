@@ -1,6 +1,7 @@
 -module(erlv8_script).
 
 -behaviour(gen_server2).
+-include_lib("erlv8/include/erlv8.hrl").
 
 %% API
 -export([start_link/1,new/0,run/2,register/2,register/3,global/1,global/2,add_handler/3,stop/1,
@@ -16,6 +17,7 @@
 		  script,
 		  requests = [],
 		  mods = [],
+		  this = [],
 		  ticks,
 		  ticked = [],
 		  flush_tick = false,
@@ -139,6 +141,12 @@ handle_cast(run, #state{ script = Script } = State) ->
 	erlv8_nif:run(Script, self()),
 	{noreply, State};
 
+handle_cast({this, Ref, delete}, #state{ this = This } = State) ->
+	{noreply, State#state{ this = proplists:delete(Ref, This) }};
+
+handle_cast({this, Ref, NewThis}, #state{ this = This } = State) ->
+	{noreply, State#state{ this = [{Ref, NewThis}|This] }};
+
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -171,11 +179,12 @@ handle_info(tick_me, #state{ script = Script, ticks = Ticks, ticked = Ticked } =
 	end;
 
 %% Invocation
-handle_info({F,Ref,Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
+handle_info({F,#erlv8_fun_invocation{ ref = Ref, this = IThis } = Invocation,Args}, #state{ this = This } = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
 				  Result = erlang:apply(F,[Self,Invocation,Args]),
-				  next_tick(Self, {result, Ref, Result})
+				  next_tick(Self, {result, Ref, Result, proplists:get_value(Ref, This, IThis)}),
+				  gen_server2:cast({this, Ref, delete})
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->

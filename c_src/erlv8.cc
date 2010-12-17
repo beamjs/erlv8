@@ -141,10 +141,10 @@ public:
 	  v8::Locker locker;
 	  v8::HandleScope handle_scope;
 	}
-	ticker(0);
+	ticker(0,0);
   };
 
-  v8::Handle<v8::Value> ticker(ERL_NIF_TERM ref) {
+  v8::Handle<v8::Value> ticker(ERL_NIF_TERM ref,const v8::Arguments *arguments) {
 	v8::Locker locker;
 	v8::Context::Scope context_scope(context);
 
@@ -175,6 +175,21 @@ public:
 				   (!strcmp(name,"result")) &&
 				   (enif_is_identical(array[1],ref))) { // this is our result
 		  free(name);
+
+		  v8::Handle<v8::Array> keys = arguments->This()->GetPropertyNames();
+		  for (unsigned int i=0;i<keys->Length();i++) {
+			v8::Handle<v8::String> key = v8::Handle<v8::String>::Cast(keys->Get(v8::Integer::New(i)));
+			arguments->This()->Delete(key);
+		  }
+		  
+		  v8::Handle<v8::Object> new_this = term_to_js(env,array[3])->ToObject();
+		  v8::Handle<v8::Array> new_keys = new_this->GetPropertyNames();
+
+		  for (unsigned int i=0;i<new_keys->Length();i++) {
+			v8::Handle<v8::Value> key = new_keys->Get(v8::Integer::New(i));
+			arguments->This()->Set(key,v8::Local<v8::Value>::New(new_this->Get(key)));
+		  }
+
 		  return term_to_js(env,array[2]);
 		} else if (!strcmp(name,"call")) { // it is a call
 		  ErlNifEnv *msg_env = enif_alloc_env();
@@ -409,14 +424,16 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   ERL_NIF_TERM ref = enif_make_ref(script->env);
   // send invocation request
   SEND(script->server,
-	   enif_make_tuple4(send.env,enif_make_copy(send.env,term),enif_make_copy(send.env,ref),
-						enif_make_tuple4(send.env, 
+	   enif_make_tuple3(send.env,enif_make_copy(send.env,term),
+						enif_make_tuple6(send.env, 
 										 enif_make_atom(send.env,"erlv8_fun_invocation"),
 										 enif_make_atom(send.env,arguments.IsConstructCall() ? "true" : "false"),
 										 js_to_term(send.env, arguments.Holder()),
-										 js_to_term(send.env, arguments.This())),
+										 js_to_term(send.env, arguments.This()),
+										 enif_make_copy(send.env, ref),
+										 enif_make_pid(send.env, script->server)),
 						js_to_term(send.env,array)));
-  return script->ticker(ref);
+  return script->ticker(ref, &arguments);
 };
 
 
