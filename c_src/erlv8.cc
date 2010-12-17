@@ -412,7 +412,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 	   enif_make_tuple4(send.env,enif_make_copy(send.env,term),enif_make_copy(send.env,ref),
 						enif_make_tuple4(send.env, 
 										 enif_make_atom(send.env,"erlv8_fun_invocation"),
-										 js_to_term(send.env, v8::Boolean::New(arguments.IsConstructCall())),
+										 enif_make_atom(send.env,arguments.IsConstructCall() ? "true" : "false"),
 										 js_to_term(send.env, arguments.Holder()),
 										 js_to_term(send.env, arguments.This())),
 						js_to_term(send.env,array)));

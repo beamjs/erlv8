@@ -164,6 +164,20 @@ fun_this_test() ->
 	?assertEqual({ok, erlv8_script:global(Script)}, erlv8_script:run(Script,"x()")),
 	stop().
 
+fun_is_construct_call_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	Self = self(),
+	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{ is_construct_call = ICC },[]) -> ICC end}]),
+	?assertEqual({ok, false}, erlv8_script:run(Script,"x()")),
+	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{ is_construct_call = ICC },[]) -> Self ! ICC end}]),
+	erlv8_script:run(Script,"new x()"),
+	receive 
+		X ->
+			?assertEqual(true, X)
+	end,
+	stop().
+
 fun_callback_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
