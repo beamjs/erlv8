@@ -13,6 +13,7 @@ static v8::Persistent<v8::ObjectTemplate> global_template;
 
 static ErlNifResourceType * script_resource;
 static ErlNifResourceType * fun_resource;
+static ErlNifResourceType * obj_resource;
 
 class Script; //fwd
 
@@ -25,6 +26,11 @@ typedef struct _fun_res_t {
   v8::Persistent<v8::Function> fun;
   Script * script;
 } fun_res_t;
+
+typedef struct _obj_res_t { 
+  v8::Persistent<v8::Context> ctx;
+  v8::Persistent<v8::Object> obj;
+} obj_res_t;
 
 static ErlNifEnv * fun_holder_env;
 
@@ -104,6 +110,9 @@ public:
   ErlNifMutex *tick_cond_mtx;
 
   ErlNifTid tid;
+  
+  script_res_t * resource;
+  
 
   Script() {
 	ticked = 0;
@@ -176,20 +185,6 @@ public:
 				   (enif_is_identical(array[1],ref))) { // this is our result
 		  free(name);
 		  
-		  v8::Handle<v8::Array> keys = arguments->This()->GetPropertyNames();
-		  for (unsigned int i=0;i<keys->Length();i++) {
-			v8::Handle<v8::String> key = v8::Handle<v8::String>::Cast(keys->Get(v8::Integer::New(i)));
-			arguments->This()->Delete(key);
-		  }
-		  
-		  v8::Handle<v8::Object> new_this = term_to_js(env,array[3])->ToObject();
-		  v8::Handle<v8::Array> new_keys = new_this->GetPropertyNames();
-		  
-		  for (unsigned int i=0;i<new_keys->Length();i++) {
-			v8::Handle<v8::Value> key = new_keys->Get(v8::Integer::New(i));
-			arguments->This()->Set(key,v8::Local<v8::Value>::New(new_this->Get(key)));
-		  }
-		  
 		  v8::Handle<v8::Value> ret = term_to_js(env,array[2]);
 		  return ret;
 		} else if (!strcmp(name,"call")) { // it is a call
@@ -261,26 +256,6 @@ public:
 		  }
 		  enif_free_env(msg_env);
 		  free(buf);
-		} else if (!strcmp(name,"global")) {
-		  v8::Handle<v8::Object> global = context->Global();
-		  SEND(server,enif_make_tuple3(send.env,
-									   enif_make_atom(send.env,"request_response"),
-									   enif_make_copy(send.env,tick_ref),
-									   js_to_term(send.env,global)));
-		} else if (!strcmp(name,"set_global")) {
-		  v8::Handle<v8::Object> global = context->Global();
-		  v8::Handle<v8::Object> new_global = term_to_js(env,array[1])->ToObject();
-	  
-		  v8::Handle<v8::Array> keys = new_global->GetPropertyNames();
-
-		  for (unsigned int i=0;i<keys->Length();i++) {
-			v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
-			global->Set(key,v8::Local<v8::Value>::New(new_global->Get(key)));
-		  }
-		  SEND(server,enif_make_tuple3(send.env,
-									   enif_make_atom(send.env,"request_response"),
-									   enif_make_copy(send.env,tick_ref),
-									   enif_make_atom(send.env,"ok")));
 		} else if ((unsigned long) ref) { // retick if we don't need this tick
 		  SEND(server,
 			   enif_make_tuple2(send.env,
@@ -312,6 +287,7 @@ static ERL_NIF_TERM new_script(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 
   script_res_t *ptr = (script_res_t *)enif_alloc_resource(script_resource, sizeof(script_res_t));
   ptr->script = script;
+  script->resource = ptr;
   
   term = enif_make_resource(env, ptr);
 
@@ -379,13 +355,88 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   };
 };
 
+static ERL_NIF_TERM global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  script_res_t *res;
+  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->script->context);
+	  v8::Handle<v8::Object> global = res->script->context->Global();
+	  return js_to_term(env,global);
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+static ERL_NIF_TERM to_proplist(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  obj_res_t *res;
+  if (enif_get_resource(env,argv[0],obj_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->ctx);
+	  
+	  v8::Handle<v8::Array> keys = res->obj->GetPropertyNames();
+	  
+	  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
+
+	  for (unsigned int i=0;i<keys->Length();i++) {
+		v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
+		arr[i] = enif_make_tuple2(env,
+								  js_to_term(env,v8::Handle<v8::String>::Cast(key)),
+								  js_to_term(env,res->obj->Get(key)));
+	  }
+	  ERL_NIF_TERM list = enif_make_list_from_array(env,arr,keys->Length());
+	  free(arr);
+	  return list;
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+static ERL_NIF_TERM object_set(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  obj_res_t *res;
+  if (enif_get_resource(env,argv[0],obj_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->ctx);
+	  res->obj->Set(term_to_js(env,argv[1]),term_to_js(env,argv[2]));
+	  return argv[2];
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+static ERL_NIF_TERM object_get(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  obj_res_t *res;
+  if (enif_get_resource(env,argv[0],obj_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->ctx);
+	  return js_to_term(env, res->obj->Get(term_to_js(env,argv[1])));
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
 static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 0, new_script},
   {"set_server", 2, set_server},
+  {"global",1, global},
   {"to_string",2, to_string},
   {"to_detail_string",2, to_detail_string},
-  {"tick",3, tick}
+  {"to_proplist",1, to_proplist},
+  {"tick",3, tick},
+  {"object_set",3, object_set},
+  {"object_get",2, object_get},
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
@@ -461,20 +512,6 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   } 
   else if (enif_is_empty_list(env,term)) {
 	return v8::Local<v8::Object>::New(v8::Object::New());
-  } else if (enif_is_proplist(env,term)) {
-	v8::Handle<v8::Object> obj = v8::Object::New();
-	ERL_NIF_TERM head, tail;
-	ERL_NIF_TERM current = term;
-	int arity;
-	ERL_NIF_TERM *array;
-	while (enif_get_list_cell(env, current, &head, &tail)) {
-	  enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&array);
-	  obj->Set(term_to_js(env,array[0]),
-			   term_to_js(env,array[1]));
-
-	  current = tail;
-	}
-	return v8::Local<v8::Object>::New(obj);
   } else if (enif_is_list(env,term)) {
 	  // try it as a string
 	  unsigned len;
@@ -537,14 +574,38 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		return f;
 	  }
 	}
-	if (arity == 2) { // check if it is an error
+	if (arity == 2) { 
 	  unsigned len;
 	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
 	  char * name = (char *) malloc(len + 1);
 	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  // check if it is an error
 	  int iserror = strcmp(name,"error")==0;
 	  int isthrow = strcmp(name,"throw")==0;
+	  // check if it is an object
+	  int isobj = strcmp(name,"erlv8_object")==0;
 	  free(name);
+	  if (isobj) {
+		obj_res_t *res;
+		if (enif_get_resource(env,array[1],obj_resource,(void **)(&res))) {
+		  return res->obj;
+		} else if (enif_is_proplist(env,array[1])) {
+		  v8::Handle<v8::Object> obj = v8::Object::New();
+		  ERL_NIF_TERM head, tail;
+		  ERL_NIF_TERM current = array[1];
+		  int arity;
+		  ERL_NIF_TERM *arr;
+		  while (enif_get_list_cell(env, current, &head, &tail)) {
+			enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&arr);
+			obj->Set(term_to_js(env,arr[0]),
+					 term_to_js(env,arr[1]));
+
+			current = tail;
+		  }
+		  return v8::Local<v8::Object>::New(obj);
+		}
+
+	  }
 	  if (iserror) {
 		return v8::Exception::Error(v8::Handle<v8::String>::Cast(term_to_js(env,array[1])));
 	  }
@@ -627,20 +688,15 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	free(arr);
 	return list;
   } else if (val->IsObject()) {
-    v8::Handle<v8::Object> obj = v8::Handle<v8::Object>::Cast(val);
-	v8::Handle<v8::Array> keys = obj->GetPropertyNames();
+	obj_res_t *ptr = (obj_res_t *)enif_alloc_resource(obj_resource, sizeof(obj_res_t));
+	ptr->obj = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
+	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 
-	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
-	for (unsigned int i=0;i<keys->Length();i++) {
-	  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
-
-	  arr[i] = enif_make_tuple(env,2,
-							   js_to_term(env,v8::Handle<v8::String>::Cast(key)),
-							   js_to_term(env,obj->Get(key)));
-	}
-	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,keys->Length());
-	free(arr);
-	return list;
+	ERL_NIF_TERM term = enif_make_tuple2(env,
+										 enif_make_atom(env, "erlv8_object"),
+										 enif_make_resource(env, ptr));
+	enif_release_resource(ptr);
+	return term;
   } else if (val->IsExternal()) { // passing terms
 	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(val);
 	ERL_NIF_TERM term = *term_ref;
@@ -659,11 +715,17 @@ static void fun_resource_destroy(ErlNifEnv* env, void* obj) {
   res->ctx.Dispose();
   res->fun.Dispose();
 };
+static void obj_resource_destroy(ErlNifEnv* env, void* obj) {
+  obj_res_t * res = reinterpret_cast<obj_res_t *>(obj);
+  res->obj.Dispose();
+};
 
 int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 {
   script_resource = enif_open_resource_type(env, NULL, "erlv8_script_resource", script_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
   fun_resource = enif_open_resource_type(env, NULL, "erlv8_fun_resource", fun_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
+  obj_resource = enif_open_resource_type(env, NULL, "erlv8_obj_resource", obj_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
+
   fun_holder_env = enif_alloc_env();
 
   v8::V8::Initialize();

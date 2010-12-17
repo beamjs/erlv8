@@ -44,71 +44,79 @@ script_global_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:run(Script,"var a = 1+1;"),
-	?assertEqual([{"a",2}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	?assertEqual([{"a",2}],Global:proplist()),
 	stop().
 
 script_set_global_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a",1}]),
+	Global = erlv8_script:global(Script),
+	Global:set_value("a",1),
 	erlv8_script:run(Script,"var b = a+1;"),
-	?assertEqual([{"a",1},{"b",2}],erlv8_script:global(Script)),
+	?assertEqual([{"a",1},{"b",2}],Global:proplist()),
 	stop().
 
 term_to_js_object_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a",1},{"b","c"},{"c",[]}]),
-	?assertEqual([{"a",1},{"b","c"},{"c",[]}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	Global:set_value("obj",erlv8_object:new([{"a",1},{"b","c"},{"c",[]}])),
+	Obj = Global:get_value("obj"),
+	?assertMatch([{"a",1},{"b","c"},{"c",_}],Obj:proplist()),
+	C = Obj:get_value("c"),
+	?assertEqual([],C:proplist()),
 	stop().
 
 term_to_js_boolean_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a",true},{"b",false}]),
-	?assertEqual([{"a",true},{"b",false}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	Global:set_value("a",true),
+	Global:set_value("b",false),
+	?assertEqual([{"a",true},{"b",false}],Global:proplist()),
 	stop().
 
 term_to_js_atom_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{a,b},{c,d}]),
-	?assertEqual([{"a","b"},{"c","d"}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	Global:set_value(a,b),
+	Global:set_value(c,d),
+	?assertEqual([{"a","b"},{"c","d"}],Global:proplist()),
 	stop().
 
 term_to_js_undefined_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a",undefined}]),
-	?assertEqual([{"a",undefined}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	Global:set_value("a",undefined),
+	?assertEqual([{"a",undefined}],Global:proplist()),
 	stop().
 
 term_to_js_number_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}]),
-	?assertEqual([{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	PL = [{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}],
+	[ Global:set_value(K,V) || {K,V} <- PL ],
+	?assertEqual(PL,Global:proplist()),
 	stop().
 
 term_to_js_unsupported_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a",{this_tuple,is_not_supported}}]),
-	?assertEqual([{"a",undefined}],erlv8_script:global(Script)),
-	stop().
-
-term_to_js_proplist_test() ->
-	start(),
-	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"prop", [{"a",1},{b,2}]}]),
-	?assertEqual([{"prop", [{"a",1},{"b",2}]}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	Global:set_value("a",{this_tuple,is_not_supported}),
+	?assertEqual([{"a",undefined}],Global:proplist()),
 	stop().
 
 term_to_js_invalid_proplist_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"prop", [{"a",1},{b,2},{3,4}]}]),
-	?assertEqual([{"prop", [undefined, undefined, undefined]}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	Global:set_value("prop", [{"a",1},{b,2},{3,4}]),
+	?assertEqual([undefined, undefined, undefined],Global:get_value("prop")),
 	stop().
 
 
@@ -116,14 +124,16 @@ js_to_term_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:run(Script,"x = function () {}"),
-	?assertMatch([{"x",{erlv8_fun,_,Script,[]}}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	?assertMatch([{"x",{erlv8_fun,_,Script,[]}}],Global:proplist()),
 	stop().
 
 js_object_to_term_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
 	erlv8_script:run(Script,"x = function () {}; x.a = 1"),
-	?assertMatch([{"x",{erlv8_fun,_,Script,[{"a",1}]}}],erlv8_script:global(Script)),
+	Global = erlv8_script:global(Script),
+	?assertMatch([{"x",{erlv8_fun,_,Script,[{"a",1}]}}],Global:proplist()),
 	stop().
 
 term_to_js_object_fun_erlv8_fun_test() ->
@@ -131,14 +141,16 @@ term_to_js_object_fun_erlv8_fun_test() ->
 	{ok, Script} = erlv8_script:new(),
 	{ok, Fun} = erlv8_script:run(Script,"x = function () {}; x.a = 1; x"),
 	?assertMatch({erlv8_fun,_,Script,[{"a",1}]},Fun),
-	erlv8_script:global(Script,[{"y",Fun}]),
+	Global = erlv8_script:global(Script),
+	Global:set_value("y",Fun),
 	?assertMatch({ok, 1}, erlv8_script:run(Script,"y.a")),
 	stop().
 
 term_to_js_object_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"x",erlv8_funobj:new(fun (#erlv8_fun_invocation{},[]) -> 123 end, [{"y",1}])}]),
+	Global = erlv8_script:global(Script),
+	Global:set_value("x",erlv8_funobj:new(fun (#erlv8_fun_invocation{},[]) -> 123 end, [{"y",1}])),
 	?assertMatch({ok, 1}, erlv8_script:run(Script,"x.y")),
 	?assertMatch({ok, 123}, erlv8_script:run(Script,"x()")),
 	stop().
@@ -146,10 +158,11 @@ term_to_js_object_fun_test() ->
 term_to_js_error_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{},[]) -> {throw, {error, "Hello"}} end}]),
+	Global = erlv8_script:global(Script),
+	Global:set_value("x",fun (#erlv8_fun_invocation{},[]) -> {throw, {error, "Hello"}} end),
 	{exception, Exception} = erlv8_script:run(Script,"x()"),
-	?assertEqual("Hello", proplists:get_value("message",Exception)),
-	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{},[]) -> {throw, "Goodbye"} end}]),
+	?assertEqual("Hello", Exception:get_value("message")),
+	Global:set_value("x",fun (#erlv8_fun_invocation{},[]) -> {throw, "Goodbye"} end),
 	{exception, "Goodbye"} = erlv8_script:run(Script,"x()"),
 	stop().
 
@@ -205,29 +218,33 @@ fun_new_script_inside_test() ->
 fun_this_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{}=I,[]) -> I:this() end}]),
-	?assertEqual({ok, erlv8_script:global(Script)}, erlv8_script:run(Script,"x()")),
+	Global = erlv8_script:global(Script),
+	Global:set_value("x",fun (#erlv8_fun_invocation{}=I,[]) -> I:this() end),
+	{ok, Result} = erlv8_script:run(Script,"x()"),
+	?assertEqual(Global:proplist(), Result:proplist()),
 	stop().
 
 fun_is_construct_call_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{}=I,[]) -> I:is_construct_call() end}]),
+	Global = erlv8_script:global(Script),
+	Global:set_value("x",fun (#erlv8_fun_invocation{}=I,[]) -> I:is_construct_call() end),
 	?assertEqual({ok, false}, erlv8_script:run(Script,"x()")),
-	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{}=I,[]) -> I:this([{"icc",I:is_construct_call()}]) end}]),
+	Global:set_value("x",fun (#erlv8_fun_invocation{ this = This }=I,[]) -> This:set_value("icc",I:is_construct_call()) end),
 	?assertEqual({ok, true}, erlv8_script:run(Script,"new x().icc")),
 	stop().
 
 fun_global_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"a", 1}, {"x",fun (#erlv8_fun_invocation{}=I,[]) -> 
-													   G0 = I:global(),
-													   G1 = [{"a", 2}, proplists:delete("a", G0)],
-													   I:global(G1)
-											   end}]),
+	Global = erlv8_script:global(Script),
+	Global:set_value("x",fun (#erlv8_fun_invocation{}=I,[]) -> 
+								 Global = I:global(),
+								 Global:set_value("a",2)
+						 end),
+	?assertMatch([{"x", _}], Global:proplist()),
 	erlv8_script:run(Script,"x()"),
-	?assertMatch([{"a",1},{"x", _}], erlv8_script:global(Script)),
+	?assertMatch([{"x", _},{"a", 2}], Global:proplist()),
 	stop().
 
 fun_callback_test() ->

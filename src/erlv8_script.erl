@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,new/0,run/2,register/2,register/3,global/1,global/2,add_handler/3,stop/1,
+-export([start_link/1,new/0,run/2,register/2,register/3,global/1,add_handler/3,stop/1,
 		 to_string/2,to_detail_string/2,next_tick/2, next_tick/3, next_tick/4]).
 
 %% gen_server2 callbacks
@@ -17,7 +17,6 @@
 		  script,
 		  requests = [],
 		  mods = [],
-		  this = [], globals = [],
 		  ticks,
 		  ticked = [],
 		  flush_tick = false,
@@ -77,17 +76,8 @@ handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } 
 	Result = gen_event:add_handler(EventMgr,Handler,Args),
 	{reply, Result, State};
 
-handle_call(global, From, #state{requests = Requests } = State) ->
-	Ref = make_ref(),
-	Self = self(),
-	spawn(fun () -> next_tick(Self,{global}, Ref) end),
-	{noreply, State#state{ requests = [{Ref, From}|Requests] }};
-
-handle_call({set_global, _Global}=Tick, From, #state{ requests = Requests } = State) ->
-	Ref = make_ref(),
-	Self = self(),
-	spawn(fun () -> next_tick(Self,Tick, Ref) end),
-	{noreply, State#state{ requests = [{Ref, From}|Requests] }};
+handle_call(global, _From, #state{ script = Script } = State) ->
+	{reply, erlv8_nif:global(Script), State};
 
 handle_call({to_string, Val}, _From, #state { script = Script } = State) ->
 	Reply = erlv8_nif:to_string(Script, Val),
@@ -134,18 +124,6 @@ handle_cast(run, #state{ script = Script } = State) ->
 	erlv8_nif:run(Script, self()),
 	{noreply, State};
 
-handle_cast({globals, Ref, delete}, #state{ globals = Globals } = State) ->
-	{noreply, State#state{ globals = proplists:delete(Ref, Globals) }};
-
-handle_cast({global, Ref, NewGlobal}, #state{ globals = Globals } = State) ->
-	{noreply, State#state{ globals = [{Ref, NewGlobal}|Globals] }};
-
-handle_cast({this, Ref, delete}, #state{ this = This } = State) ->
-	{noreply, State#state{ this = proplists:delete(Ref, This) }};
-
-handle_cast({this, Ref, NewThis}, #state{ this = This } = State) ->
-	{noreply, State#state{ this = [{Ref, NewThis}|This] }};
-
 handle_cast(_Msg, State) ->
 	{noreply, State}.
 
@@ -177,14 +155,11 @@ handle_info(tick_me, #state{ script = Script, ticks = Ticks, ticked = Ticked } =
 	end;
 
 %% Invocation
-handle_info({F,#erlv8_fun_invocation{ ref = Ref, this = IThis } = Invocation,Args}, #state{ this = This, globals = Globals } = State) when is_function(F), is_list(Args) ->
+handle_info({F,#erlv8_fun_invocation{ ref = Ref } = Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
 				  Result = erlang:apply(F,[Invocation,Args]),
-				  next_tick(Self, {result, Ref, Result, proplists:get_value(Ref, This, IThis)}),
-				  global(Self, proplists:get_value(Ref, Globals, global(Self))),
-				  gen_server2:cast({this, Ref, delete}),
-				  gen_server2:cast({global, Ref, delete})
+				  next_tick(Self, {result, Ref, Result})
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
@@ -195,17 +170,6 @@ handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
 			gen_server2:reply(From, Result),
 			{noreply, State#state{ ticked = proplists:delete(Ref, Ticked) } }
 	end;
-handle_info({request_response, Ref, Response}, #state{ requests = Requests } = State) ->
-	State1 =
-	case proplists:get_value(Ref,Requests) of
-		undefined ->
-			error_logger:warning_msg("Ref ~p not found in Requests. This shouldn't normally happen~n",[Ref]),
-			State;
-		From ->
-			gen_server2:reply(From, Response),
-			State#state{ requests = proplists:delete(Ref, Requests) }
-	end,
-	{noreply, State1};
 handle_info({compilation_failed, Ref, Error}=Evt, #state{ event_mgr = EventMgr, requests = Requests  } = State) ->
 	State1 =
 	case proplists:get_value(Ref,Requests) of
@@ -304,17 +268,14 @@ register(Server, Name, Mod) when is_atom(Mod) ->
 	register(Server, Name, fun () -> Mod:exports() end);
 
 register(Server, Name, Mod) when is_function(Mod) ->
-	G0 = global(Server),
-	global(Server, [{Name, Mod()}|proplists:delete(Name, G0)]).
+	Global = global(Server),
+	Global:set_value(Name, Mod()).
 
 run(Server, Source) ->
 	gen_server2:call(Server, {script, Source}, infinity).
 
 global(Server) ->
 	gen_server2:call(Server, global, infinity).
-
-global(Server, Global) when is_list(Global) ->
-	gen_server2:call(Server, {set_global, Global},infinity).
 
 stop(Server) ->
 	gen_server2:call(Server,stop).
