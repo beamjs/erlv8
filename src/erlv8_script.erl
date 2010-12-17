@@ -164,7 +164,6 @@ handle_info({retick, Ref}, #state{ script = Script, ticked = Ticked, ticks = Tic
 		undefined ->
 			{noreply, State};
 		{From, Tick} ->
-			tack = erlv8_nif:tick(Script, Ref, Tick),
 			{noreply, State#state { ticks = queue:in({Ref, {From, Tick}},Ticks) } }
 	end;
 
