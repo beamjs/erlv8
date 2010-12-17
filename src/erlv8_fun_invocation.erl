@@ -18,4 +18,5 @@ global() ->
 	erlv8_script:global(Server).
 
 global(NewGlobal) ->
-	gen_server2:cast(Server, {global, Ref, NewGlobal}).
+	gen_server2:cast(Server, {global, Ref, NewGlobal}),
+	undefined.
