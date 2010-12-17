@@ -90,6 +90,14 @@ term_to_js_number_test() ->
 	?assertEqual([{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}],erlv8_script:global(Script)),
 	stop().
 
+term_to_js_unsupported_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"a",{this_tuple,is_not_supported}}]),
+	?assertEqual([{"a",undefined}],erlv8_script:global(Script)),
+	stop().
+
+
 js_to_term_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),

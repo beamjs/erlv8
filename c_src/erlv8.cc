@@ -547,7 +547,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
   }
-  return v8::Object::New(); // if nothing else works, may be an empty object will be ok
+  return v8::Undefined(); // if nothing else works, return undefined
 };
 
 
