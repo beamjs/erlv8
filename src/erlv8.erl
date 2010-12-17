@@ -160,7 +160,7 @@ fun_new_script_inside_test() ->
 fun_this_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
-	erlv8_script:global(Script,[{"x",erlv8_funobj:new(fun (_, #erlv8_fun_invocation{}=I,[]) -> I:this() end, [{"y",1}])}]),
+	erlv8_script:global(Script,[{"x",fun (_, #erlv8_fun_invocation{}=I,[]) -> I:this() end}]),
 	?assertEqual({ok, erlv8_script:global(Script)}, erlv8_script:run(Script,"x()")),
 	stop().
 
