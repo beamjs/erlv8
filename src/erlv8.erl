@@ -157,6 +157,13 @@ fun_new_script_inside_test() ->
 	?assertEqual({ok, 321},erlv8_script:run(Script, "test()")),
 	stop().
 
+fun_this_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"x",erlv8_funobj:new(fun (_, #erlv8_fun_invocation{ this = This },[]) -> This end, [{"y",1}])}]),
+	?assertEqual({ok, erlv8_script:global(Script)}, erlv8_script:run(Script,"x()")),
+	stop().
+
 fun_callback_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
