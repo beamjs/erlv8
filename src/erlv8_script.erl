@@ -159,7 +159,7 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({retick, Ref}, #state{ script = Script, ticked = Ticked, ticks = Ticks } = State) ->
+handle_info({retick, Ref}, #state{ ticked = Ticked, ticks = Ticks } = State) ->
 	case proplists:get_value(Ref, Ticked) of
 		undefined ->
 			{noreply, State};
