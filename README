@@ -1,0 +1,10 @@
+Quick Instructions
+==================
+
+In order to build erlv8, make sure you have g++, erlang & scons installed system-wide. Then just type:
+
+	$ make
+
+After a couple of minutes (V8 takes quite some time to build), it should be over.
+
+Good luck!
