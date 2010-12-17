@@ -97,6 +97,20 @@ term_to_js_unsupported_test() ->
 	?assertEqual([{"a",undefined}],erlv8_script:global(Script)),
 	stop().
 
+term_to_js_proplist_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"prop", [{"a",1},{b,2}]}]),
+	?assertEqual([{"prop", [{"a",1},{"b",2}]}],erlv8_script:global(Script)),
+	stop().
+
+term_to_js_invalid_proplist_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"prop", [{"a",1},{b,2},{3,4}]}]),
+	?assertEqual([{"prop", [undefined, undefined, undefined]}],erlv8_script:global(Script)),
+	stop().
+
 
 js_to_term_fun_test() ->
 	start(),

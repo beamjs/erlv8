@@ -44,6 +44,19 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 	if (!enif_is_tuple(env,head)) return 0; // not a tuple -> not a proplist
 	enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&array);
 	if (arity != 2) return 0; // does not consist of two elements -> not a proplist
+	if (enif_is_list(env, array[0])) {
+	  unsigned len;
+	  enif_get_list_length(env, array[0], &len);
+	  char * str = (char *) malloc(len + 1);
+	  if (!enif_get_string(env, array[0], str, len + 1, ERL_NIF_LATIN1)) {
+		free(str);
+	 	return 0;
+	  }
+	  free(str);
+	} else if (!enif_is_atom(env, array[0])) {
+	  return 0;
+	}
+
 	current = tail;
   }
   return 1;
