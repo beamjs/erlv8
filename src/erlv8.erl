@@ -121,6 +121,16 @@ term_to_js_object_fun_test() ->
 	?assertMatch({ok, 123}, erlv8_script:run(Script,"x()")),
 	stop().
 
+term_to_js_error_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{},[]) -> {throw, {error, "Hello"}} end}]),
+	{exception, Exception} = erlv8_script:run(Script,"x()"),
+	?assertEqual("Hello", proplists:get_value("message",Exception)),
+	erlv8_script:global(Script,[{"x",fun (#erlv8_fun_invocation{},[]) -> {throw, "Goodbye"} end}]),
+	{exception, "Goodbye"} = erlv8_script:run(Script,"x()"),
+	stop().
+
 object_fun_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),

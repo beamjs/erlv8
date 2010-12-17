@@ -148,8 +148,6 @@ public:
 	v8::Locker locker;
 	v8::Context::Scope context_scope(context);
 
-	v8::TryCatch try_catch;
-
 	while (1) {
 	  v8::Unlocker unlocker;
 	  requestTick();
@@ -175,7 +173,7 @@ public:
 				   (!strcmp(name,"result")) &&
 				   (enif_is_identical(array[1],ref))) { // this is our result
 		  free(name);
-
+		  
 		  v8::Handle<v8::Array> keys = arguments->This()->GetPropertyNames();
 		  for (unsigned int i=0;i<keys->Length();i++) {
 			v8::Handle<v8::String> key = v8::Handle<v8::String>::Cast(keys->Get(v8::Integer::New(i)));
@@ -184,13 +182,14 @@ public:
 		  
 		  v8::Handle<v8::Object> new_this = term_to_js(env,array[3])->ToObject();
 		  v8::Handle<v8::Array> new_keys = new_this->GetPropertyNames();
-
+		  
 		  for (unsigned int i=0;i<new_keys->Length();i++) {
 			v8::Handle<v8::Value> key = new_keys->Get(v8::Integer::New(i));
 			arguments->This()->Set(key,v8::Local<v8::Value>::New(new_this->Get(key)));
 		  }
-
-		  return term_to_js(env,array[2]);
+		  
+		  v8::Handle<v8::Value> ret = term_to_js(env,array[2]);
+		  return ret;
 		} else if (!strcmp(name,"call")) { // it is a call
 		  ErlNifEnv *msg_env = enif_alloc_env();
 		  ERL_NIF_TERM call_ref = enif_make_copy(msg_env, tick_ref);
@@ -210,12 +209,12 @@ public:
 			  i++; current = tail;
 			}
 			v8::Local<v8::Value> call_result = fun_res->fun->Call(fun_res->ctx->Global(), alen, args);
-			
 			SEND(server,
 				 enif_make_tuple3(send.env,
 								  enif_make_atom(send.env,"result"),
 								  enif_make_copy(send.env,call_ref),
 								  js_to_term(send.env,call_result)));
+
 			enif_free_env(msg_env);
 			delete [] args;
 			args = NULL;
@@ -228,6 +227,8 @@ public:
 		  enif_get_list_length(env, array[1], &len);
 		  char * buf = (char *) malloc(len + 1);
 		  enif_get_string(env,array[1],buf,len + 1, ERL_NIF_LATIN1);
+
+		  v8::TryCatch try_catch;
 
 		  v8::Handle<v8::String> script = v8::String::New(buf, len);
 		  v8::Handle<v8::Script> compiled = v8::Script::Compile(script);
@@ -552,7 +553,21 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		return f;
 	  }
 	}
-	
+	if (arity == 2) { // check if it is an error
+	  unsigned len;
+	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
+	  char * name = (char *) malloc(len + 1);
+	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  int iserror = strcmp(name,"error")==0;
+	  int isthrow = strcmp(name,"throw")==0;
+	  free(name);
+	  if (iserror) {
+		return v8::Exception::Error(v8::Handle<v8::String>::Cast(term_to_js(env,array[1])));
+	  }
+	  if (isthrow) {
+		return v8::ThrowException(term_to_js(env, array[1]));
+	  }
+	}
 
   } else if (enif_is_fun(env, term)) {
 	ERL_NIF_TERM term2 = enif_make_copy(fun_holder_env,term);
