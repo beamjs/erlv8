@@ -1,7 +1,7 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([new_script/0,set_server/2,register/3,to_string/2,to_detail_string/2,tick/3]).
+-export([new_script/0,set_server/2,to_string/2,to_detail_string/2,tick/3]).
 
 init() ->
 	case os:getenv("ERLV8_SO_PATH") of
@@ -22,9 +22,6 @@ new_script() ->
 	error(not_loaded).
 
 set_server(_ScriptObject,_Pid) ->
-	error(not_loaded).
-
-register(_ScriptObject,_Name,_Exports) ->
 	error(not_loaded).
 
 to_string(_ScriptObject,_Obj) ->

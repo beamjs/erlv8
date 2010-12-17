@@ -125,17 +125,6 @@ public:
 	ticked = 0;
   }
 
-  void register_module(char * name, ERL_NIF_TERM exports) {
-	{
-	  v8::Locker locker;
-	  v8::HandleScope handle_scope;
-	  v8::Context::Scope context_scope(context);
-
-	  v8::Local<v8::Value> obj = v8::Local<v8::Value>::New(term_to_js(env,exports));
-	  context->Global()->Set(v8::String::New(name),obj);
-	}
-  };
-
   void run() {
 	{
 	  v8::Locker locker;
@@ -330,23 +319,6 @@ static ERL_NIF_TERM set_server(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   return enif_make_badarg(env);
 };
 
-
-static ERL_NIF_TERM register_module(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  script_res_t *res;
-  if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
-	unsigned len;
-	enif_get_atom_length(env, argv[1], &len, ERL_NIF_LATIN1);
-	char * name = (char *) malloc(len + 1);
-	enif_get_atom(env,argv[1],name,len + 1, ERL_NIF_LATIN1);
-	res->script->register_module(name,enif_make_copy(res->script->env,argv[2]));
-	free(name);
-  } else {
-	return enif_make_badarg(env);
-  };
-  return enif_make_atom(env,"ok");
-};
-
-
 static ERL_NIF_TERM to_string(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   script_res_t *res;
   if (enif_get_resource(env,argv[0],script_resource,(void **)(&res))) {
@@ -398,7 +370,6 @@ static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 0, new_script},
   {"set_server", 2, set_server},
-  {"register", 3, register_module},
   {"to_string",2, to_string},
   {"to_detail_string",2, to_detail_string},
   {"tick",3, tick}

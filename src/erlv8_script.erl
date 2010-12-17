@@ -77,13 +77,6 @@ handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } 
 	Result = gen_event:add_handler(EventMgr,Handler,Args),
 	{reply, Result, State};
 
-handle_call({register, Name, Mod}, _From, #state{ script = Script, mods = Mods} = State) when is_function(Mod) ->
-	erlv8_nif:register(Script, Name, Mod()),
-	{reply, ok, State#state{ mods = [{Name,Mod}|Mods] }};
-
-handle_call({register, Name, Mod}, From, State) ->
-	handle_call({register, Name, fun () -> Mod:exports() end}, From, State);
-
 handle_call(global, From, #state{requests = Requests } = State) ->
 	Ref = make_ref(),
 	Self = self(),
@@ -305,11 +298,12 @@ new() ->
 add_handler(Server, Handler, Args) ->
 	gen_server2:call(Server, {add_handler, Handler, Args}).
 
-register(Server, Mod) ->
-	gen_server2:call(Server, Mod, Mod).
+register(Server, Mod) when is_atom(Mod) ->
+	register(Server, Mod, fun () -> Mod:exports() end).
 
-register(Server, Name, Mod) ->
-	gen_server2:call(Server, {register, Name, Mod}).
+register(Server, Name, Mod) when is_function(Mod) ->
+	G0 = global(Server),
+	global(Server, [{Name, Mod()}|proplists:delete(Name, G0)]).
 
 run(Server, Source) ->
 	gen_server2:call(Server, {script, Source}, infinity).
