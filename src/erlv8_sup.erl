@@ -23,5 +23,5 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    {ok, { {simple_one_for_one_terminate, 5, 10}, [?CHILD(erlv8_script,transient,worker)]} }.
+    {ok, { {simple_one_for_one_terminate, 5, 10}, [?CHILD(erlv8_vm,transient,worker)]} }.
 

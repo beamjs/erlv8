@@ -1,7 +1,7 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([new_script/0,set_server/2,global/1,to_string/2,to_detail_string/2,tick/3,to_proplist/1,object_set/3,object_get/2,
+-export([new_vm/0,set_server/2,global/1,to_string/2,to_detail_string/2,tick/3,to_proplist/1,object_set/3,object_get/2,
 		 object_set_proto/2, object_get_proto/1]).
 
 init() ->
@@ -19,7 +19,7 @@ init() ->
 	end.
 
 
-new_script() ->
+new_vm() ->
 	error(not_loaded).
 
 set_server(_ScriptObject,_Pid) ->

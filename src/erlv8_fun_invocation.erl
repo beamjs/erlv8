@@ -11,4 +11,4 @@ this() ->
 	This.
 
 global() ->
-	erlv8_script:global(Server).
+	erlv8_vm:global(Server).

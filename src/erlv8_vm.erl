@@ -1,4 +1,4 @@
--module(erlv8_script).
+-module(erlv8_vm).
 
 -behaviour(gen_server2).
 -include_lib("erlv8/include/erlv8.hrl").
@@ -255,7 +255,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Public functions
 %%%===================================================================
 new() ->
-	Script = erlv8_nif:new_script(),
+	Script = erlv8_nif:new_vm(),
 	supervisor2:start_child(erlv8_sup,[Script]).
 
 add_handler(Server, Handler, Args) ->

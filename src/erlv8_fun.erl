@@ -5,7 +5,7 @@ call() ->
 	call([]).
 
 call(Args) ->
-	erlv8_script:next_tick(Script, {call, Resource, Args}).
+	erlv8_vm:next_tick(Script, {call, Resource, Args}).
 
 object() ->
 	Object.
