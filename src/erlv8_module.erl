@@ -3,7 +3,7 @@
 
 behaviour_info(callbacks) ->
     [{init,1},
-     {exports, 0}];
+     {exports, 1}];
 
 behaviour_info(_Other) ->
     undefined.
