@@ -25,8 +25,6 @@ typedef struct _val_res_t {
   v8::Persistent<v8::Value> val;
 } val_res_t;
 
-static ErlNifEnv * fun_holder_env;
-
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term); // fwd
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
 
@@ -716,9 +714,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
 
   } else if (enif_is_fun(env, term)) {
-	ERL_NIF_TERM term2 = enif_make_copy(fun_holder_env,term);
-
-    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term2));
+    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
   } else if (enif_is_pid(env, term)) {
@@ -810,8 +806,6 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   vm_resource = enif_open_resource_type(env, NULL, "erlv8_vm_resource", vm_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
   val_resource = enif_open_resource_type(env, NULL, "erlv8_val_resource", val_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
 
-  fun_holder_env = enif_alloc_env();
-
   v8::V8::Initialize();
   v8::HandleScope handle_scope;
 
@@ -826,7 +820,6 @@ void unload(ErlNifEnv *env, void* priv_data)
 {
   v8::Locker::StopPreemption();
   global_template.Dispose();
-  enif_free_env(fun_holder_env);
 };
 
 ERL_NIF_INIT(erlv8_nif,nif_funcs,load,NULL,NULL,unload)
