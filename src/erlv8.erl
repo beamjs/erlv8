@@ -94,6 +94,14 @@ term_to_js_undefined_test() ->
 	?assertEqual([{"a",undefined}],Global:proplist()),
 	stop().
 
+term_to_js_null_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	Global = erlv8_script:global(Script),
+	Global:set_value("a",null),
+	?assertEqual([{"a",null}],Global:proplist()),
+	stop().
+
 term_to_js_number_test() ->
 	start(),
 	{ok, Script} = erlv8_script:new(),
