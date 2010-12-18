@@ -302,4 +302,18 @@ to_detail_string_test() ->
 	?assertEqual("[object Object]",erlv8_script:to_string(Script,[])),
 	stop().
 
+proto_test() ->
+	start(),
+	{ok, Script} = erlv8_script:new(),
+	Global = erlv8_script:global(Script),
+	Global:set_value("proto",erlv8_object:new([{"x",1}])),
+	Global:set_value("obj",erlv8_object:new([{"y",1}])),
+	Proto = Global:get_value("proto"),
+	Obj = Global:get_value("obj"),
+	?assertEqual(true, Obj:set_prototype(Proto)),
+	ObjProto = Obj:get_prototype(),
+	?assertEqual(Proto:proplist(),ObjProto:proplist()),
+	?assertEqual({ok, 1},erlv8_script:run(Script,"obj.x")),
+	stop().
+
 -endif.

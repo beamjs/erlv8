@@ -427,6 +427,34 @@ static ERL_NIF_TERM object_get(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
   };
 };
 
+static ERL_NIF_TERM object_set_proto(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  obj_res_t *res;
+  if ((enif_get_resource(env,argv[0],obj_resource,(void **)(&res)))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->ctx);
+	  return enif_make_atom(env, res->obj->SetPrototype(term_to_js(env,argv[1])) ? "true" : "false");
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+static ERL_NIF_TERM object_get_proto(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  obj_res_t *res;
+  if (enif_get_resource(env,argv[0],obj_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->ctx);
+	  return js_to_term(env, res->obj->GetPrototype());
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
 static ErlNifFunc nif_funcs[] =
 {
   {"new_script", 0, new_script},
@@ -438,6 +466,8 @@ static ErlNifFunc nif_funcs[] =
   {"tick",3, tick},
   {"object_set",3, object_set},
   {"object_get",2, object_get},
+  {"object_set_proto",2, object_set_proto},
+  {"object_get_proto",1, object_get_proto}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()

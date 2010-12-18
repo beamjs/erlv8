@@ -1,5 +1,5 @@
 -module(erlv8_object,[Res]).
--export([proplist/0, set_value/2, get_value/1, get_value/2]).
+-export([proplist/0, set_value/2, get_value/1, get_value/2, set_prototype/1, get_prototype/0]).
 
 proplist() ->
 	erlv8_nif:to_proplist(Res).
@@ -17,4 +17,9 @@ get_value(Key, Default) ->
 		Val ->
 			Val
 	end.
-	
+
+set_prototype(Proto) ->
+	erlv8_nif:object_set_proto(Res, Proto).
+
+get_prototype() ->
+	erlv8_nif:object_get_proto(Res).
