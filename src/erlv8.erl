@@ -298,8 +298,8 @@ js_fun_test() ->
 	F = Global:get_value("f"),
 	?assertEqual(100,F:call()),
 	erlv8_vm:run(VM,"f1 = function (x) { return x*100; }"),
-	F = Global:get_value("f1"),
-	?assertEqual(200,F:call([2])),
+	F1 = Global:get_value("f1"),
+	?assertEqual(200,F1:call([2])),
 	stop().
 
 
