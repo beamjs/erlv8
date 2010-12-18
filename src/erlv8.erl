@@ -320,6 +320,17 @@ js_fun_test() ->
 	?assertEqual(200,F1:call([2])),
 	stop().
 
+js_fun_this_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	erlv8_vm:run(VM,"f = function () { this.x = 100; }; y = {}"),
+	F = Global:get_value("f"),
+	Y = Global:get_value("y"),
+	F:call(Y,[]),
+	?assertEqual(100, Y:get_value("x")),
+	stop().
+
 
 to_string_test() ->
 	start(),

@@ -206,7 +206,13 @@ public:
 			  args[i] = v8::Local<v8::Value>::New(term_to_js(env,head));
 			  i++; current = tail;
 			}
-			v8::Local<v8::Value> call_result = fun_res->fun->Call(fun_res->ctx->Global(), alen, args);
+			v8::Handle<v8::Object> recv;
+			if (arity == 4) { // this is specified
+			  recv = term_to_js(env, array[3])->ToObject();
+			} else {
+			  recv = fun_res->ctx->Global();
+			}
+			v8::Local<v8::Value> call_result = fun_res->fun->Call(recv, alen, args);
 			SEND(server,
 				 enif_make_tuple3(env,
 								  enif_make_atom(env,"result"),
