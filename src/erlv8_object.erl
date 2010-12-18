@@ -1,5 +1,5 @@
 -module(erlv8_object,[Res]).
--export([proplist/0, set_value/2, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, set_prototype/1, get_prototype/0]).
+-export([proplist/0, set_value/2, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, set_prototype/1, get_prototype/0, equals/1, strict_equals/1]).
 
 proplist() ->
 	erlv8_nif:to_proplist(Res).
@@ -37,3 +37,9 @@ set_prototype(Proto) ->
 
 get_prototype() ->
 	erlv8_nif:object_get_proto(Res).
+
+equals({erlv8_object,AnotherObject}) ->
+	erlv8_value:equals(Res, AnotherObject).
+
+strict_equals({erlv8_object,AnotherObject}) ->
+	erlv8_value:strict_equals(Res, AnotherObject).

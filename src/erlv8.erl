@@ -362,4 +362,22 @@ hidden_value_test() ->
 	?assertEqual({ok, undefined}, erlv8_vm:run(VM,"this.a")),
 	stop().
 
+equality_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("v1",?V8Obj([{"a",1}])),
+	Global:set_value("v2",?V8Obj([{"a",1}])),
+	V1 = Global:get_value("v1"),
+	V2 = Global:get_value("v2"),
+	?assert(V1:equals(V1)),
+	?assert(not V1:strict_equals(V2)),
+	erlv8_vm:run(VM,"f1 = function() { return 1; }; f2 = function() { return 2; };"),
+	F1 = Global:get_value("f1"),
+	F2 = Global:get_value("f2"),
+	?assert(F1:equals(F1)),
+	?assert(not F1:strict_equals(F2)),
+	stop().
+	
+
 -endif.
