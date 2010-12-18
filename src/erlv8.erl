@@ -290,6 +290,17 @@ fun_callback_test() ->
 	end,
 	stop().
 
+js_fun_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	erlv8_vm:run(VM,"f = function () { return 100; }"),
+	F = Global:get_value("f"),
+	?assertEqual(100,F:call()),
+	erlv8_vm:run(VM,"f1 = function (x) { return x*100; }"),
+	F = Global:get_value("f1"),
+	?assertEqual(200,F:call([2])),
+	stop().
 
 
 to_string_test() ->
