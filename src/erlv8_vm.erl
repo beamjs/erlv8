@@ -265,7 +265,8 @@ register(Server, Mod) when is_atom(Mod) ->
 	register(Server, Mod, Mod).
 
 register(Server, Name, Mod) when is_atom(Mod) ->
-	register(Server, Name, fun () -> Mod:exports() end);
+	register(Server, Name, fun () -> Mod:exports() end),
+	Mod:init(Server);
 
 register(Server, Name, Mod) when is_function(Mod) ->
 	Global = global(Server),
