@@ -6,3 +6,4 @@
 		  server
 		 }).
 		  
+-define(V8Obj(x),erlv8_object:new(x)).
