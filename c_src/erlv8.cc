@@ -92,6 +92,7 @@ public:
 #define SEND(pid, code) \
   { \
 	Send send = Send(pid); \
+	ErlNifEnv * env = send.env; \
 	send.send(code); \
   } 
 
@@ -137,7 +138,7 @@ public:
   };
 
   void requestTick() {
-	SEND(server,enif_make_atom(send.env,"tick_me"));
+	SEND(server,enif_make_atom(env,"tick_me"));
   }
 
   void waitForTick() {
@@ -207,10 +208,10 @@ public:
 			}
 			v8::Local<v8::Value> call_result = fun_res->fun->Call(fun_res->ctx->Global(), alen, args);
 			SEND(server,
-				 enif_make_tuple3(send.env,
-								  enif_make_atom(send.env,"result"),
-								  enif_make_copy(send.env,call_ref),
-								  js_to_term(send.env,call_result)));
+				 enif_make_tuple3(env,
+								  enif_make_atom(env,"result"),
+								  enif_make_copy(env,call_ref),
+								  js_to_term(env,call_result)));
 
 			enif_free_env(msg_env);
 			delete [] args;
@@ -233,34 +234,34 @@ public:
 
 		  if (compiled.IsEmpty()) {
 			SEND(server,
-				 (enif_make_tuple3(send.env,
-								   enif_make_atom(send.env,"compilation_failed"),
-								   enif_make_copy(send.env, script_ref),
-								   js_to_term(send.env,try_catch.Exception()))));
+				 (enif_make_tuple3(env,
+								   enif_make_atom(env,"compilation_failed"),
+								   enif_make_copy(env, script_ref),
+								   js_to_term(env,try_catch.Exception()))));
 		  } else {
-			SEND(server, enif_make_tuple2(send.env,
-										  enif_make_atom(send.env,"starting"),
-										  enif_make_copy(send.env, script_ref)));
+			SEND(server, enif_make_tuple2(env,
+										  enif_make_atom(env,"starting"),
+										  enif_make_copy(env, script_ref)));
 			v8::Handle<v8::Value> value = compiled->Run();
 			if (value.IsEmpty()) {
-			  SEND(server,enif_make_tuple3(send.env,
-										   enif_make_atom(send.env,"exception"),
-										   enif_make_copy(send.env, script_ref),
-										   js_to_term(send.env,try_catch.Exception())));
+			  SEND(server,enif_make_tuple3(env,
+										   enif_make_atom(env,"exception"),
+										   enif_make_copy(env, script_ref),
+										   js_to_term(env,try_catch.Exception())));
 			} else {
-			  SEND(server,enif_make_tuple3(send.env,
-										   enif_make_atom(send.env,"finished"),
-										   enif_make_copy(send.env, script_ref),
-										   js_to_term(send.env,value)));
+			  SEND(server,enif_make_tuple3(env,
+										   enif_make_atom(env,"finished"),
+										   enif_make_copy(env, script_ref),
+										   js_to_term(env,value)));
 			}
 		  }
 		  enif_free_env(msg_env);
 		  free(buf);
 		} else if ((unsigned long) ref) { // retick if we don't need this tick
 		  SEND(server,
-			   enif_make_tuple2(send.env,
-								enif_make_atom(send.env,"retick"),
-								enif_make_copy(send.env,tick_ref)));
+			   enif_make_tuple2(env,
+								enif_make_atom(env,"retick"),
+								enif_make_copy(env,tick_ref)));
 		}
 		
 		free(name);
@@ -460,16 +461,16 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   ERL_NIF_TERM ref = enif_make_ref(script->env);
   // send invocation request
   SEND(script->server,
-	   enif_make_tuple3(send.env,
-						enif_make_copy(send.env,term),
-						enif_make_tuple6(send.env, 
-										 enif_make_atom(send.env,"erlv8_fun_invocation"),
-										 enif_make_atom(send.env,arguments.IsConstructCall() ? "true" : "false"),
-										 js_to_term(send.env, arguments.Holder()),
-										 js_to_term(send.env, arguments.This()),
-										 enif_make_copy(send.env, ref),
-										 enif_make_pid(send.env, script->server)),
-						js_to_term(send.env,array)));
+	   enif_make_tuple3(env,
+						enif_make_copy(env,term),
+						enif_make_tuple6(env, 
+										 enif_make_atom(env,"erlv8_fun_invocation"),
+										 enif_make_atom(env,arguments.IsConstructCall() ? "true" : "false"),
+										 js_to_term(env, arguments.Holder()),
+										 js_to_term(env, arguments.This()),
+										 enif_make_copy(env, ref),
+										 enif_make_pid(env, script->server)),
+						js_to_term(env,array)));
   return script->ticker(ref, &arguments);
 };
 
