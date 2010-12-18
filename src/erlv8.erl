@@ -335,4 +335,13 @@ proto_test() ->
 	?assertEqual({ok, 1},erlv8_vm:run(VM,"obj.x")),
 	stop().
 
+hidden_value_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	Global:set_hidden_value("a",1),
+	?assertEqual(1,Global:get_hidden_value("a")),
+	?assertEqual({ok, undefined}, erlv8_vm:run(VM,"this.a")),
+	stop().
+
 -endif.
