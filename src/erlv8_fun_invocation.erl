@@ -1,5 +1,5 @@
--module(erlv8_fun_invocation,[ICC,Holder,This,Ref,Server]).
--export([is_construct_call/0, holder/0, this/0, global/0]).
+-module(erlv8_fun_invocation,[ICC,Holder,This,Ref,VM]).
+-export([is_construct_call/0, holder/0, this/0, global/0, vm/0]).
 
 is_construct_call() ->
 	ICC.
@@ -11,4 +11,7 @@ this() ->
 	This.
 
 global() ->
-	erlv8_vm:global(Server).
+	erlv8_vm:global(VM).
+
+vm() ->
+	VM.

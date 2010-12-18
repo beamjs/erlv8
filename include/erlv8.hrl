@@ -3,7 +3,7 @@
 		  holder,
 		  this,
 		  ref,
-		  server
+		  vm
 		 }).
 		  
 -define(V8Obj(X),erlv8_object:new(X)).

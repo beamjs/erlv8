@@ -216,10 +216,10 @@ fun_test() ->
 	?assertEqual({ok, 321}, erlv8_vm:run(VM,"f = function(x) { return test(x) }; test0(f);")),
 	stop().
 
-fun_server_is_pid_test() ->
+fun_vm_is_pid_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{ server = Server} = _Invocation,[]) -> is_pid(Server) end, F end),
+	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{ vm = VM1 } = _Invocation,[]) -> is_pid(VM1) end, F end),
 	?assertEqual({ok, true}, erlv8_vm:run(VM,"test();")),
 	stop().
 
