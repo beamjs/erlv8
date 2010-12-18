@@ -377,6 +377,20 @@ static ERL_NIF_TERM global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   };
 };
 
+static ERL_NIF_TERM value_taint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  vm_res_t *res;
+  if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
+	{
+	  v8::Locker locker;
+	  v8::HandleScope handle_scope;
+	  v8::Context::Scope context_scope(res->vm->context);
+	  return js_to_term(env,term_to_js(env,argv[1]));
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
 static ERL_NIF_TERM to_proplist(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   obj_res_t *res;
   if (enif_get_resource(env,argv[0],obj_resource,(void **)(&res))) {
@@ -556,7 +570,8 @@ static ErlNifFunc nif_funcs[] =
   {"object_set_proto",2, object_set_proto},
   {"object_get_proto",1, object_get_proto},
   {"value_equals",2, value_equals},
-  {"value_strict_equals",2, value_strict_equals}
+  {"value_strict_equals",2, value_strict_equals},
+  {"value_taint",2, value_taint}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()

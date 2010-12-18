@@ -5,7 +5,7 @@
 
 %% API
 -export([start_link/1,new/0,run/2,register/2,register/3,global/1,add_handler/3,stop/1,
-		 to_string/2,to_detail_string/2,next_tick/2, next_tick/3, next_tick/4]).
+		 to_string/2,to_detail_string/2,taint/2,next_tick/2, next_tick/3, next_tick/4]).
 
 %% gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -75,6 +75,10 @@ init([VM]) ->
 handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } = State) ->
 	Result = gen_event:add_handler(EventMgr,Handler,Args),
 	{reply, Result, State};
+
+
+handle_call({taint, Value}, _From, #state{ vm = VM } = State) ->
+	{reply, erlv8_nif:value_taint(VM,Value), State};
 
 handle_call(global, _From, #state{ vm = VM } = State) ->
 	{reply, erlv8_nif:global(VM), State};
@@ -299,4 +303,5 @@ next_tick(Server, Tick, Timeout) ->
 next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
 	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
 
-
+taint(Server, Value) ->
+	gen_server2:call(Server, {taint, Value}).

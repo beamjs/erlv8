@@ -60,88 +60,67 @@ vm_set_global_test() ->
 term_to_js_object_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("obj",erlv8_object:new([{"a",1},{"b","c"}])),
-	Obj = Global:get_value("obj"),
+	Obj = erlv8_vm:taint(VM,?V8Obj([{"a",1},{"b","c"}])),
 	?assertMatch([{"a",1},{"b","c"}],Obj:proplist()),
 	stop().
 
 term_to_js_boolean_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("a",true),
-	Global:set_value("b",false),
-	?assertEqual([{"a",true},{"b",false}],Global:proplist()),
+	?assertEqual(true, erlv8_vm:taint(VM,true)),
+	?assertEqual(false, erlv8_vm:taint(VM,false)),
 	stop().
 
 term_to_js_atom_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value(a,b),
-	Global:set_value(c,d),
-	?assertEqual([{"a","b"},{"c","d"}],Global:proplist()),
+	?assertEqual("a", erlv8_vm:taint(VM,a)),
+	?assertEqual("b", erlv8_vm:taint(VM,b)),
 	stop().
 
 term_to_js_undefined_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("a",undefined),
-	?assertEqual([{"a",undefined}],Global:proplist()),
+	?assertEqual(undefined, erlv8_vm:taint(VM,undefined)),
 	stop().
 
 term_to_js_null_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("a",null),
-	?assertEqual([{"a",null}],Global:proplist()),
+	?assertEqual(null, erlv8_vm:taint(VM,null)),
 	stop().
 
 term_to_js_number_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	PL = [{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}],
-	[ Global:set_value(K,V) || {K,V} <- PL ],
-	?assertEqual(PL,Global:proplist()),
+	Nums = [2147483648,-2147483649,1,4294967296,4294967297,3.555],
+	[ ?assertEqual(N, erlv8_vm:taint(VM,N)) || N <- Nums ],
 	stop().
 
 term_to_js_array_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("x",[1,2,3]),
-	?assertEqual([1,2,3],Global:get_value("x")),
-	Global:set_value("x",[]),
-	?assertEqual([],Global:get_value("x")),
+	?assertEqual([1,2,3],erlv8_vm:taint(VM,[1,2,3])),
+	?assertEqual([],erlv8_vm:taint(VM,[])),
 	stop().
 
 term_to_js_pid_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("pid", self()),
-	?assertEqual(self(), Global:get_value("pid")),
-	?assertEqual(self(), Global:get_value("pid")),
+	?assertEqual(self(), erlv8_vm:taint(VM,self())),
+	?assertEqual(self(), erlv8_vm:taint(VM,self())), % the second call is to ensure memory is managed properly (regression)
 	stop().
 
 term_to_js_unsupported_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("a",{this_tuple,is_not_supported}),
-	?assertEqual([{"a",undefined}],Global:proplist()),
+	?assertEqual(undefined,erlv8_vm:taint(VM,{this_tuple,is_not_supported})),
 	stop().
 
-term_to_js_invalid_proplist_test() ->
+term_to_js_object_invalid_proplist_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	Global = erlv8_vm:global(VM),
-	Global:set_value("prop", [{"a",1},{b,2},{3,4}]),
-	?assertEqual([undefined, undefined, undefined],Global:get_value("prop")),
+	?assertEqual(undefined, erlv8_vm:taint(VM,?V8Obj([{"a",1},{b,2},{3,4}]))),
 	stop().
 
 
@@ -392,6 +371,14 @@ equality_test() ->
 	?assert(F1:equals(F1)),
 	?assert(not F1:strict_equals(F2)),
 	stop().
+
+
+taint_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	?assertMatch({erlv8_object, _},erlv8_vm:taint(VM, ?V8Obj([{"a",1}]))),
+	stop().
+	
 	
 
 -endif.
