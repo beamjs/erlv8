@@ -1,5 +1,5 @@
 -module(erlv8_object,[Res]).
--export([proplist/0, set_value/2, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, set_prototype/1, get_prototype/0, equals/1, strict_equals/1]).
+-export([proplist/0, set_value/2, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, set_prototype/1, get_prototype/0, equals/1, strict_equals/1, call/1, call/2]).
 
 proplist() ->
 	erlv8_nif:to_proplist(Res).
@@ -43,3 +43,11 @@ equals({erlv8_object,AnotherObject}) ->
 
 strict_equals({erlv8_object,AnotherObject}) ->
 	erlv8_value:strict_equals(Res, AnotherObject).
+
+call(Fun) ->
+	call(Fun,[]).
+
+call(Fun,Args) ->
+    Fun:call({erlv8_object, Res}, Args).
+	
+	

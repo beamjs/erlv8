@@ -324,11 +324,13 @@ js_fun_this_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
 	Global = erlv8_vm:global(VM),
-	erlv8_vm:run(VM,"f = function () { this.x = 100; }; y = {}"),
+	erlv8_vm:run(VM,"f = function (a) { this.x = a*100; }; y = {}"),
 	F = Global:get_value("f"),
 	Y = Global:get_value("y"),
-	F:call(Y,[]),
+	F:call(Y,[1]),
 	?assertEqual(100, Y:get_value("x")),
+	Y:call(F,[2]), % test another API
+	?assertEqual(200, Y:get_value("x")),
 	stop().
 
 
