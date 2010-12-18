@@ -111,6 +111,14 @@ term_to_js_number_test() ->
 	?assertEqual(PL,Global:proplist()),
 	stop().
 
+term_to_js_pid_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("pid", self()),
+	?assertEqual(self(), Global:get_value("pid")),
+	stop().
+
 term_to_js_unsupported_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
@@ -275,10 +283,11 @@ fun_callback_test() ->
 	{ok, VM} = erlv8_vm:new(),
 	Self = self(),
 	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation, [Cb]) -> 
-														   spawn(fun () ->
-																		 timer:sleep(1000), %% allow ample time
-																		 Self ! {ok, Cb:call([1])}
-																 end)
+														spawn(fun () ->
+																	  timer:sleep(1000), %% allow ample time
+																	  Self ! {ok, Cb:call([1])}
+															  end),
+														undefined
 												   end, F end),
 	
 	erlv8_vm:run(VM,"f = function(x) { return x}; test(f);"),

@@ -674,6 +674,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term2));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
+  } else if (enif_is_pid(env, term)) {
+	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
+	*term_ref = term;
+	return v8::External::New(term_ref);
   }
   return v8::Undefined(); // if nothing else works, return undefined
 };
