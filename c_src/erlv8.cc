@@ -23,7 +23,6 @@ typedef struct _vm_res_t {
 typedef struct _val_res_t { 
   v8::Persistent<v8::Context> ctx;
   v8::Persistent<v8::Value> val;
-  VM * vm;
 } val_res_t;
 
 static ErlNifEnv * fun_holder_env;
@@ -741,7 +740,6 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 
 	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 	ptr->val = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
-	ptr->vm = vm;
 
 	ERL_NIF_TERM term = enif_make_tuple3(env,enif_make_atom(env,"erlv8_fun"), 
 										 enif_make_resource(env, ptr),
