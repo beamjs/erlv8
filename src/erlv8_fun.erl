@@ -4,7 +4,7 @@
 call() ->
 	call([]).
 
-call(Args) ->
+call(Args) when is_list(Args) ->
 	erlv8_vm:next_tick(VM, {call, Resource, Args}).
 
 object() ->
