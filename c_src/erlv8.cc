@@ -575,7 +575,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	return v8::Local<v8::Number>::New(v8::Number::New(_double));
   } 
   else if (enif_is_empty_list(env,term)) {
-	return v8::Local<v8::Object>::New(v8::Object::New());
+	return v8::Local<v8::Array>::New(v8::Array::New());
   } else if (enif_is_list(env,term)) {
 	  // try it as a string
 	  unsigned len;

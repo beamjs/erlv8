@@ -61,11 +61,9 @@ term_to_js_object_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
 	Global = erlv8_vm:global(VM),
-	Global:set_value("obj",erlv8_object:new([{"a",1},{"b","c"},{"c",[]}])),
+	Global:set_value("obj",erlv8_object:new([{"a",1},{"b","c"}])),
 	Obj = Global:get_value("obj"),
-	?assertMatch([{"a",1},{"b","c"},{"c",_}],Obj:proplist()),
-	C = Obj:get_value("c"),
-	?assertEqual([],C:proplist()),
+	?assertMatch([{"a",1},{"b","c"}],Obj:proplist()),
 	stop().
 
 term_to_js_boolean_test() ->
@@ -109,6 +107,16 @@ term_to_js_number_test() ->
 	PL = [{"a",2147483648},{"b",-2147483649},{"c",1},{"d",4294967296},{"dd",4294967297},{"e",3.555}],
 	[ Global:set_value(K,V) || {K,V} <- PL ],
 	?assertEqual(PL,Global:proplist()),
+	stop().
+
+term_to_js_array_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("x",[1,2,3]),
+	?assertEqual([1,2,3],Global:get_value("x")),
+	Global:set_value("x",[]),
+	?assertEqual([],Global:get_value("x")),
 	stop().
 
 term_to_js_pid_test() ->
@@ -319,7 +327,7 @@ to_string_test() ->
 	?assertEqual("1",erlv8_vm:to_string(VM,1)),
 	?assertEqual("1",erlv8_vm:to_string(VM,"1")),
 	?assertEqual("true",erlv8_vm:to_string(VM,true)),
-	?assertEqual("[object Object]",erlv8_vm:to_string(VM,[])),
+	?assertEqual("[object Object]",erlv8_vm:to_string(VM,?V8Obj([{a,1}]))),
 	stop().
 
 to_detail_string_test() ->
@@ -328,7 +336,7 @@ to_detail_string_test() ->
 	?assertEqual("1",erlv8_vm:to_string(VM,1)),
 	?assertEqual("1",erlv8_vm:to_string(VM,"1")),
 	?assertEqual("true",erlv8_vm:to_string(VM,true)),
-	?assertEqual("[object Object]",erlv8_vm:to_string(VM,[])),
+	?assertEqual("[object Object]",erlv8_vm:to_string(VM,?V8Obj([{a,1}]))),
 	stop().
 
 proto_test() ->
