@@ -750,7 +750,6 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   } else if (val->IsExternal()) { // passing terms
 	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(val);
 	ERL_NIF_TERM term = *term_ref;
-	free(term_ref);
 	return term;
   } else {
 	return enif_make_atom(env,"$unknown");

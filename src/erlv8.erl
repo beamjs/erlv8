@@ -117,6 +117,7 @@ term_to_js_pid_test() ->
 	Global = erlv8_vm:global(VM),
 	Global:set_value("pid", self()),
 	?assertEqual(self(), Global:get_value("pid")),
+	?assertEqual(self(), Global:get_value("pid")),
 	stop().
 
 term_to_js_unsupported_test() ->
