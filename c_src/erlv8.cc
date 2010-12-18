@@ -650,7 +650,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	ERL_NIF_TERM *array;
 	int arity;
 	enif_get_tuple(env,term,&arity,(const ERL_NIF_TERM **)&array);
-	if (arity == 4) { 	// check if it is a v8_fun
+	if (arity == 3) { 	// check if it is a v8_fun
 	  unsigned len;
 	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
 	  char * name = (char *) malloc(len + 1);
@@ -663,7 +663,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		return res->val;
 	  } else if ((isv8fun) && (enif_is_fun(env, array[1]))) {
 		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env,array[1]));
-		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(env,array[3]));
+		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(env,array[2]));
 		
 		v8::Handle<v8::Array> keys = o->GetPropertyNames();
 
@@ -743,18 +743,9 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	ptr->val = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
 	ptr->vm = vm;
 
-	val_res_t *ptr1 = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
-	ptr1->val = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
-	ptr1->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-
-	ERL_NIF_TERM term = enif_make_tuple4(env,enif_make_atom(env,"erlv8_fun"), 
+	ERL_NIF_TERM term = enif_make_tuple3(env,enif_make_atom(env,"erlv8_fun"), 
 										 enif_make_resource(env, ptr),
-										 enif_make_pid(env, vm->server),
-										 enif_make_tuple2(env,
-														  enif_make_atom(env,"erlv8_object"),
-														  enif_make_resource(env, ptr1)));
-	enif_release_resource(ptr);
-	enif_release_resource(ptr1);
+										 enif_make_pid(env, vm->server));
 
 	return term;
   } else if	(val->IsUndefined()) {
