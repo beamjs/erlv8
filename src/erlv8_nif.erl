@@ -22,19 +22,19 @@ init() ->
 new_vm() ->
 	error(not_loaded).
 
-set_server(_ScriptObject,_Pid) ->
+set_server(_VMObject,_Pid) ->
 	error(not_loaded).
 
-global(_ScriptObject) ->
+global(_VMObject) ->
 	error(not_loaded).
 
-to_string(_ScriptObject,_Obj) ->
+to_string(_VMObject,_Obj) ->
 	error(not_loaded).
 
-to_detail_string(_ScriptObject,_Obj) ->
+to_detail_string(_VMObject,_Obj) ->
 	error(not_loaded).
 
-tick(_ScriptObject, _Ref, _Tick) ->
+tick(_VMObject, _Ref, _Tick) ->
 	error(not_loaded).
 
 to_proplist(_ObjectRes) ->

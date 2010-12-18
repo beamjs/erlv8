@@ -14,7 +14,7 @@
 -define(SERVER, ?MODULE). 
 
 -record(state, {
-		  script,
+		  vm,
 		  requests = [],
 		  mods = [],
 		  ticks,
@@ -31,11 +31,11 @@
 %% @doc
 %% Starts the server
 %%
-%% @spec start_link(Script) -> {ok, Pid} | ignore | {error, Error}
+%% @spec start_link(VM) -> {ok, Pid} | ignore | {error, Error}
 %% @end
 %%--------------------------------------------------------------------
-start_link(Script) ->
-	gen_server2:start_link(?MODULE, [Script], []).
+start_link(VM) ->
+	gen_server2:start_link(?MODULE, [VM], []).
 
 %%%===================================================================
 %%% gen_server callbacks
@@ -52,11 +52,11 @@ start_link(Script) ->
 %%                     {stop, Reason}
 %% @end
 %%--------------------------------------------------------------------
-init([Script]) ->
+init([VM]) ->
 	process_flag(trap_exit, true),
 	{ok, EventPid} = gen_event:start_link(),
-	erlv8_nif:set_server(Script, self()),
-	{ok, #state{script = Script, ticks = queue:new(), event_mgr = EventPid}}.
+	erlv8_nif:set_server(VM, self()),
+	{ok, #state{vm = VM, ticks = queue:new(), event_mgr = EventPid}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -76,15 +76,15 @@ handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } 
 	Result = gen_event:add_handler(EventMgr,Handler,Args),
 	{reply, Result, State};
 
-handle_call(global, _From, #state{ script = Script } = State) ->
-	{reply, erlv8_nif:global(Script), State};
+handle_call(global, _From, #state{ vm = VM } = State) ->
+	{reply, erlv8_nif:global(VM), State};
 
-handle_call({to_string, Val}, _From, #state { script = Script } = State) ->
-	Reply = erlv8_nif:to_string(Script, Val),
+handle_call({to_string, Val}, _From, #state { vm = VM } = State) ->
+	Reply = erlv8_nif:to_string(VM, Val),
 	{reply, Reply, State};
 
-handle_call({to_detail_string, Val}, _From, #state { script = Script } = State) ->
-	Reply = erlv8_nif:to_detail_string(Script, Val),
+handle_call({to_detail_string, Val}, _From, #state { vm = VM } = State) ->
+	Reply = erlv8_nif:to_detail_string(VM, Val),
 	{reply, Reply, State};
 
 handle_call(stop, _From, State) ->
@@ -94,8 +94,8 @@ handle_call({next_tick, Tick}, From, State) ->
 	Ref = make_ref(),
 	handle_call({next_tick, Tick, Ref}, From, State);
 
-handle_call({next_tick, Tick, Ref}, From, #state{ script = Script, ticks = Ticks, ticked = Ticked, flush_tick = true } = State) ->
-	tack = erlv8_nif:tick(Script, Ref, Tick),
+handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked = Ticked, flush_tick = true } = State) ->
+	tack = erlv8_nif:tick(VM, Ref, Tick),
 	{noreply, State#state{ ticks = Ticks, ticked = [{Ref,{From,Tick}}|Ticked], flush_tick = false }};
 
 handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
@@ -120,8 +120,8 @@ handle_call(_Request, _From, State) ->
 %%                                  {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_cast(run, #state{ script = Script } = State) ->
-	erlv8_nif:run(Script, self()),
+handle_cast(run, #state{ vm = VM } = State) ->
+	erlv8_nif:run(VM, self()),
 	{noreply, State};
 
 handle_cast(_Msg, State) ->
@@ -145,12 +145,12 @@ handle_info({retick, Ref}, #state{ ticked = Ticked, ticks = Ticks } = State) ->
 			{noreply, State#state { ticks = queue:in({Ref, {From, Tick}},Ticks) } }
 	end;
 
-handle_info(tick_me, #state{ script = Script, ticks = Ticks, ticked = Ticked } = State) ->
+handle_info(tick_me, #state{ vm = VM, ticks = Ticks, ticked = Ticked } = State) ->
 	case queue:out(Ticks) of
 		{empty, Ticks1} ->
 			{noreply, State#state{ ticks = Ticks1, flush_tick = true }};
 		{{value, {Ref, {From,Tick}}}, Ticks1} ->
-			tack = erlv8_nif:tick(Script, Ref, Tick),
+			tack = erlv8_nif:tick(VM, Ref, Tick),
 			{noreply, State#state{ ticks = Ticks1, ticked = [{Ref,{From, Tick}}|Ticked], flush_tick = false }}
 	end;
 
@@ -231,8 +231,8 @@ prioritise_info(_,_State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, #state{ script = Script, event_mgr = EventMgr } = _State) ->
-	tack = erlv8_nif:tick(Script,make_ref(),{stop}),
+terminate(_Reason, #state{ vm = VM, event_mgr = EventMgr } = _State) ->
+	tack = erlv8_nif:tick(VM,make_ref(),{stop}),
 	gen_event:stop(EventMgr),
 	ok.
 
@@ -255,8 +255,8 @@ code_change(_OldVsn, State, _Extra) ->
 %%% Public functions
 %%%===================================================================
 new() ->
-	Script = erlv8_nif:new_vm(),
-	supervisor2:start_child(erlv8_sup,[Script]).
+	VM = erlv8_nif:new_vm(),
+	supervisor2:start_child(erlv8_sup,[VM]).
 
 add_handler(Server, Handler, Args) ->
 	gen_server2:call(Server, {add_handler, Handler, Args}).
