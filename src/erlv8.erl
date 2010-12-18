@@ -360,6 +360,7 @@ hidden_value_test() ->
 	Global:set_hidden_value("a",1),
 	?assertEqual(1,Global:get_hidden_value("a")),
 	?assertEqual({ok, undefined}, erlv8_vm:run(VM,"this.a")),
+	?assertEqual(undefined, Global:get_hidden_value("shouldntbethere")),
 	stop().
 
 equality_test() ->
