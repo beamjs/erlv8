@@ -538,6 +538,13 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 };
 
 
+void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
+  if (object.IsNearDeath()) {
+	ERL_NIF_TERM * term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(object));
+	free(term_ref);
+  }
+}
+
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   if (enif_is_atom(env, term)) {
@@ -682,7 +689,9 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   } else if (enif_is_pid(env, term)) {
 	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
 	*term_ref = term;
-	return v8::External::New(term_ref);
+	v8::Persistent<v8::External> obj = v8::Persistent<v8::External>::New(v8::External::New(term_ref));
+	obj.MakeWeak(NULL,weak_external_cleaner);
+	return obj;
   }
   return v8::Undefined(); // if nothing else works, return undefined
 };
