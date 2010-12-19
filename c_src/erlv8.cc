@@ -585,7 +585,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
   if (object.IsNearDeath()) {
 	ERL_NIF_TERM * term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(object));
-	free(term_ref);
+	enif_free(term_ref);
   }
 }
 
@@ -734,7 +734,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
   } else if ((enif_is_pid(env, term)) || (enif_is_ref(env,term))) {
-	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
+	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) enif_alloc(sizeof(ERL_NIF_TERM));
 	*term_ref = term;
 	v8::Persistent<v8::External> obj = v8::Persistent<v8::External>::New(v8::External::New(term_ref));
 	obj.MakeWeak(NULL,weak_external_cleaner);
