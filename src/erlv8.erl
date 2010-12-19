@@ -211,6 +211,14 @@ fun_test() ->
 	?assertEqual({ok, 321}, erlv8_vm:run(VM,"f = function(x) { return test(x) }; test0(f);")),
 	stop().
 
+fun_fail_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
+	?assertMatch({exception, _},erlv8_vm:run(VM,"test();")),
+	stop().
+	
+
 fun_vm_is_pid_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),

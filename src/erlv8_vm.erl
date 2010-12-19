@@ -162,8 +162,17 @@ handle_info(tick_me, #state{ vm = VM, ticks = Ticks, ticked = Ticked } = State) 
 handle_info({F,#erlv8_fun_invocation{ ref = Ref } = Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
-				  Result = erlang:apply(F,[Invocation,Args]),
-				  next_tick(Self, {result, Ref, Result})
+				  Result = (catch erlang:apply(F,[Invocation,Args])),
+				  case Result of 
+					  {'EXIT',{badarg, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Bad argument(s)"}}});
+					  {'EXIT',{function_clause, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "No matching function implementation"}}});
+					  {'EXIT',{undef, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Function implementation is undefined"}}});
+					  _ ->
+						  next_tick(Self, {result, Ref, Result})
+				  end
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
