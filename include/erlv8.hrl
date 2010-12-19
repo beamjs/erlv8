@@ -7,3 +7,4 @@
 		 }).
 		  
 -define(V8Obj(X),erlv8_object:new(X)).
+-define(V8Arr(X),erlv8_array:new(X)).

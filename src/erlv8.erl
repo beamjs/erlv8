@@ -106,8 +106,10 @@ term_to_js_number_test() ->
 term_to_js_array_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	?assertEqual([1,2,3],erlv8_vm:taint(VM,[1,2,3])),
-	?assertEqual([],erlv8_vm:taint(VM,[])),
+	A1 = erlv8_vm:taint(VM,?V8Arr([1,2,3])),
+	?assertEqual([1,2,3],A1:list()),
+	A2 = erlv8_vm:taint(VM,?V8Arr([])),
+	?assertEqual([],A2:list()),
 	stop().
 
 term_to_js_pid_test() ->
@@ -406,6 +408,38 @@ fun_extends_object_test() ->
 	{ok, F} = erlv8_vm:run(VM,"f = function() { return 1; }; f.x = 1; f"),
 	?assertEqual(1, F:get_value("x")),
 	stop().
-	
+
+array_length_test() ->	
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	A = erlv8_vm:taint(VM,?V8Arr([1,2,3])),
+	?assertEqual(3,A:length()),
+	stop().
+
+array_subscript_test() ->	
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	A = erlv8_vm:taint(VM,?V8Arr([1,2,"a"])),
+	?assertEqual("a",A:get_value(2)),
+	A:set_value(1,"b"),
+	?assertEqual("b",A:get_value(1)),
+	stop().
+
+array_push_test() ->	
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	A = erlv8_vm:taint(VM,?V8Arr([1,2,3])),
+	A:push(4),
+	?assertEqual([1,2,3,4],A:list()),
+	stop().
+
+array_unshift_test() ->	
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	A = erlv8_vm:taint(VM,?V8Arr([1,2,3])),
+	A:unshift(4),
+	?assertEqual([4,1,2,3],A:list()),
+	stop().
+
 
 -endif.

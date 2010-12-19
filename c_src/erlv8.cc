@@ -397,6 +397,25 @@ static ERL_NIF_TERM to_proplist(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
+static ERL_NIF_TERM to_list(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  val_res_t *res;
+  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
+	LHCS(res->ctx);
+	if (res->val->IsArray()) {
+	  v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(res->val->ToObject());
+	  
+	  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
+	  for (unsigned int i=0;i<array->Length();i++) {
+		arr[i] = js_to_term(env,array->Get(v8::Integer::NewFromUnsigned(i)));
+	  }
+	  ERL_NIF_TERM list = enif_make_list_from_array(env,arr,array->Length());
+	  free(arr);
+	  return list;
+	}
+  }
+  return enif_make_badarg(env);
+};
+
 static ERL_NIF_TERM object_set(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
   if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
@@ -491,6 +510,7 @@ static ErlNifFunc nif_funcs[] =
   {"to_string",2, to_string},
   {"to_detail_string",2, to_detail_string},
   {"to_proplist",1, to_proplist},
+  {"to_list",1, to_list},
   {"tick",3, tick},
   {"object_set",3, object_set},
   {"object_get",2, object_get},
@@ -522,6 +542,12 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   }
   // each call gets a unique ref
   ERL_NIF_TERM ref = enif_make_ref(vm->env);
+  // prepare arguments
+  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
+  for (unsigned int i=0;i<array->Length();i++) {
+	arr[i] = js_to_term(vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
+  }
+  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,array->Length());
   // send invocation request
   SEND(vm->server,
 	   enif_make_tuple3(env,
@@ -533,7 +559,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 										 js_to_term(env, arguments.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server)),
-						js_to_term(env,array)));
+						enif_make_copy(env,arglist)));
   return vm->ticker(ref, &arguments);
 };
 
@@ -584,30 +610,16 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	return v8::Local<v8::Number>::New(v8::Number::New(_uint64));
   } else if (enif_get_double(env,term,&_double)) {
 	return v8::Local<v8::Number>::New(v8::Number::New(_double));
-  } 
-  else if (enif_is_empty_list(env,term)) {
-	return v8::Local<v8::Array>::New(v8::Array::New());
-  } else if (enif_is_list(env,term)) {
-	  // try it as a string
-	  unsigned len;
-	  enif_get_list_length(env, term, &len);
-	  char * str = (char *) malloc(len + 1);
-	  if (enif_get_string(env, term, str, len + 1, ERL_NIF_LATIN1)) {
-		v8::Handle<v8::String> s = v8::String::New((const char *)str);
-		free(str);
-		return s;
-	  }
-	  // if it is not a string, it is a list
+  } else if (enif_is_list(env,term)) { // string
+	unsigned len;
+	enif_get_list_length(env, term, &len);
+	char * str = (char *) malloc(len + 1);
+	if (enif_get_string(env, term, str, len + 1, ERL_NIF_LATIN1)) {
+	  v8::Handle<v8::String> s = v8::String::New((const char *)str);
 	  free(str);
-	  ERL_NIF_TERM head, tail;
-	  ERL_NIF_TERM current = term;
-	  v8::Handle<v8::Object> arr = v8::Array::New(len);
-	  int i = 0;
-	  while (enif_get_list_cell(env, current, &head, &tail)) {
-		arr->Set(v8::Integer::New(i),term_to_js(env,head));
-		i++; current = tail;
+	  return s;
 	  }
-	  return v8::Local<v8::Object>::New(arr);
+	free(str);
   } else if (enif_is_tuple(env, term)) {
 	ERL_NIF_TERM *array;
 	int arity;
@@ -622,14 +634,15 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  int isv8fun = strcmp(name,"erlv8_fun")==0;
 	  // check if it is an object
 	  int isobj = strcmp(name,"erlv8_object")==0;
-
+	  // check if it is an array
+	  int isarray = strcmp(name,"erlv8_array")==0;
 	  free(name);
 
-	  if (isobj) {
+	  if (isobj||isarray) {
 		val_res_t *res;
 		if (enif_get_resource(env,array[1],val_resource,(void **)(&res))) {
 		  return res->val->ToObject();
-		} else if (enif_is_proplist(env,array[1])) {
+		} else if (isobj && enif_is_proplist(env,array[1])) {
 		  v8::Handle<v8::Object> obj = v8::Object::New();
 		  ERL_NIF_TERM head, tail;
 		  ERL_NIF_TERM current = array[1];
@@ -643,6 +656,22 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 			current = tail;
 		  }
 		  return v8::Local<v8::Object>::New(obj);
+		} else if (isarray && enif_is_list(env, array[1])) {
+		  unsigned int i,alen;
+		  ERL_NIF_TERM head, tail;
+		  ERL_NIF_TERM current = array[1];
+
+		  enif_get_list_length(env, current, &alen);
+
+		  v8::Handle<v8::Array> arrobj = v8::Array::New(alen);
+
+		  i = 0;
+		  while (enif_get_list_cell(env, current, &head, &tail)) {
+			arrobj->Set(v8::Integer::New(i), term_to_js(env,head));
+			current = tail;
+			i++;
+		  }
+		  return v8::Local<v8::Array>::New(arrobj);
 		}
 	  }
 
@@ -735,14 +764,18 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	  return enif_make_double(env,d);
 	}
   } else if (val->IsArray()) {
-    v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(val);
-	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
-	for (unsigned int i=0;i<array->Length();i++) {
-        arr[i] = js_to_term(env,array->Get(v8::Integer::NewFromUnsigned(i)));
-	}
-	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,array->Length());
-	free(arr);
-	return list;
+	val_res_t *ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
+	ptr->val = v8::Persistent<v8::Array>::New(v8::Handle<v8::Array>::Cast(val));
+	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+
+	ERL_NIF_TERM term = enif_make_tuple3(env,
+										 enif_make_atom(env, "erlv8_array"),
+										 enif_make_resource(env, ptr),
+										 enif_make_pid(env, vm->server)
+										 );
+
+	return term;
   } else if (val->IsObject()) {
 	val_res_t *ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
 	ptr->val = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
