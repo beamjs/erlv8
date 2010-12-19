@@ -117,6 +117,13 @@ term_to_js_pid_test() ->
 	?assertEqual(self(), erlv8_vm:taint(VM,self())), % the second call is to ensure memory is managed properly (regression)
 	stop().
 
+term_to_js_ref_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Ref = make_ref(),
+	?assertEqual(Ref, erlv8_vm:taint(VM,Ref)),
+	stop().
+
 term_to_js_unsupported_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),

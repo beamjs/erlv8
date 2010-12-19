@@ -686,7 +686,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
-  } else if (enif_is_pid(env, term)) {
+  } else if ((enif_is_pid(env, term)) || (enif_is_ref(env,term))) {
 	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM));
 	*term_ref = term;
 	v8::Persistent<v8::External> obj = v8::Persistent<v8::External>::New(v8::External::New(term_ref));
