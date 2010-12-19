@@ -84,6 +84,12 @@ term_to_js_undefined_test() ->
 	?assertEqual(undefined, erlv8_vm:taint(VM,undefined)),
 	stop().
 
+term_to_js_ok_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	?assertEqual(true, erlv8_vm:taint(VM,ok)),
+	stop().
+
 term_to_js_null_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
