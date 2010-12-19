@@ -232,6 +232,13 @@ fun_fail_test() ->
 	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
 	?assertMatch({exception, _},erlv8_vm:run(VM,"test();")),
 	stop().
+
+fun_fail_inside_badmatch_test() -> %% TODO: cover all standard exits?
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> ok = Val end, F end),
+	?assertMatch({exception, _}, erlv8_vm:run(VM,"test('help');")),
+	stop().
 	
 
 fun_vm_is_pid_test() ->

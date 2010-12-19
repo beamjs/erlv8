@@ -175,8 +175,32 @@ handle_info({F,#erlv8_fun_invocation{ ref = Ref } = Invocation,Args}, #state{} =
 						  next_tick(Self, {result, Ref, {throw, {error, "Bad argument(s)"}}});
 					  {'EXIT',{function_clause, _}} ->
 						  next_tick(Self, {result, Ref, {throw, {error, "No matching function implementation"}}});
+					  {'EXIT',{{badmatch, _},_}} ->
+						  next_tick(Self, {result, Ref, {throw, "Bad match"}});
+					  {'EXIT',{badarith,_}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Bad arithmetic operation"}}});
+					  {'EXIT',{{case_clause, _},_}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "No case clause matched"}}});
+					  {'EXIT',{if_clause, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Bad formed if expression, no true branch found"}}});
+					  {'EXIT',{{try_clause, _}, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "No matching branch is found when evaluating the of-section of a try expression"}}});
 					  {'EXIT',{undef, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Function implementation is undefined"}}});
+						  next_tick(Self, {result, Ref, {throw, {error, "The function cannot be found"}}});
+					  {'EXIT',{{badfun, _}, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Bad function"}}});
+					  {'EXIT',{{badarity,_}, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "A fun is applied to the wrong number of arguments"}}});
+					  {'EXIT',{timeout_value, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "The timeout value in a receive..after expression is evaluated to something else than an integer or infinity"}}});
+					  {'EXIT',{noproc, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Trying to link to a non-existing process"}}});
+					  {'EXIT',{{nocatch,_}, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Trying to evaluate a throw outside a catch"}}});
+					  {'EXIT',{system_limit, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "A system limit has been reached"}}});
+					  {'EXIT',{_, _}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, "Unknown error"}}});
 					  _ ->
 						  next_tick(Self, {result, Ref, Result})
 				  end
