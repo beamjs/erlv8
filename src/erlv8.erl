@@ -457,4 +457,11 @@ array_deletion_test() ->
 	?assertEqual([2,3], A:list()),
 	stop().
 
+vm_storage_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	erlv8_vm:stor(VM, {my_mod, data}, "Data"),
+	?assertEqual("Data",erlv8_vm:retr(VM, {my_mod, data})),
+	stop().
+
 -endif.

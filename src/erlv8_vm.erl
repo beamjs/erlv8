@@ -5,7 +5,8 @@
 
 %% API
 -export([start_link/1,new/0,run/2,register/2,register/3,global/1,add_handler/3,stop/1,
-		 to_string/2,to_detail_string/2,taint/2,next_tick/2, next_tick/3, next_tick/4]).
+		 to_string/2,to_detail_string/2,taint/2,next_tick/2, next_tick/3, next_tick/4,
+		 stor/3, retr/2]).
 
 %% gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -20,7 +21,8 @@
 		  ticks,
 		  ticked = [],
 		  flush_tick = false,
-		  event_mgr
+		  event_mgr,
+		  storage = []
 		 }).
 
 %%%===================================================================
@@ -76,6 +78,11 @@ handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } 
 	Result = gen_event:add_handler(EventMgr,Handler,Args),
 	{reply, Result, State};
 
+handle_call({stor, Key, Value}, _From, #state{ storage = Storage } = State) ->
+	{reply, ok, State#state{ storage = [{Key, Value}|Storage] }};
+
+handle_call({retr, Key}, _From, #state{ storage = Storage } = State) ->
+	{reply, proplists:get_value(Key, Storage), State};
 
 handle_call({taint, Value}, _From, #state{ vm = VM } = State) ->
 	{reply, erlv8_nif:value_taint(VM,Value), State};
@@ -314,3 +321,9 @@ next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
 
 taint(Server, Value) ->
 	gen_server2:call(Server, {taint, Value}).
+
+stor(Server, Key, Value) ->
+	gen_server2:call(Server, {stor, Key, Value}).
+
+retr(Server, Key) ->
+	gen_server2:call(Server, {retr, Key}).
