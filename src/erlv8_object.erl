@@ -38,10 +38,10 @@ set_prototype(Proto) ->
 get_prototype() ->
 	erlv8_nif:object_get_proto(Resource).
 
-equals({erlv8_object,AnotherObject,_}) ->
+equals({_Tag,AnotherObject,_}) ->
 	erlv8_value:equals(Resource, AnotherObject).
 
-strict_equals({erlv8_object,AnotherObject,_}) ->
+strict_equals({_Tag,AnotherObject,_}) ->
 	erlv8_value:strict_equals(Resource, AnotherObject).
 
 call(Fun) ->
