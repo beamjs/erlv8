@@ -1,23 +1,21 @@
 -module(erlv8_fun,[Resource,VM]).
--export([call/0,call/1,call/2,object/0,new/2,equals/1,strict_equals/1]).
+-extends(erlv8_object).
+-export([call/0,call/1,call/2,object/0,equals/1,strict_equals/1]).
 
 call() ->
 	call([]).
 
-call({erlv8_object, _}=T) ->
+call({erlv8_object, _,_}=T) ->
 	call(T,[]);
 
 call(Args) when is_list(Args) ->
 	erlv8_vm:next_tick(VM, {call, Resource, Args}).
 
-call({erlv8_object, _}=This, Args) when is_list(Args) ->
+call({erlv8_object, _,_}=This, Args) when is_list(Args) ->
 	erlv8_vm:next_tick(VM, {call, Resource, Args, This}).
 
 object() ->
-	{erlv8_object, Resource}.
-
-new(Fun, {erlv8_object,_}=Obj) when is_function(Fun) ->
-	instance(Fun,Obj).
+	{erlv8_object, Resource, VM}.
 
 equals({erlv8_fun,AnotherFun,_}) ->
 	erlv8_value:equals(Resource, AnotherFun).

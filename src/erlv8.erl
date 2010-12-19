@@ -376,9 +376,15 @@ equality_test() ->
 taint_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	?assertMatch({erlv8_object, _},erlv8_vm:taint(VM, ?V8Obj([{"a",1}]))),
+	?assertMatch({erlv8_object, _, _},erlv8_vm:taint(VM, ?V8Obj([{"a",1}]))),
 	stop().
-	
+
+fun_extends_object_test() ->	
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	{ok, F} = erlv8_vm:run(VM,"f = function() { return 1; }; f.x = 1; f"),
+	?assertEqual(1, F:get_value("x")),
+	stop().
 	
 
 -endif.
