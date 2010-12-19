@@ -30,6 +30,11 @@ typedef struct _val_res_t {
   v8::Persistent<v8::Value> val;
 } val_res_t;
 
+typedef struct _term_ref_t {
+  ErlNifEnv *env;
+  ERL_NIF_TERM term;
+} term_ref_t;
+
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term); // fwd
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val); // fwd
 
@@ -543,12 +548,33 @@ static ErlNifFunc nif_funcs[] =
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
 
+void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
+  if (object.IsNearDeath()) {
+	term_ref_t * term_ref = (term_ref_t *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(object));
+	enif_free_env(term_ref->env);
+	enif_free(term_ref);
+  }
+}
+
+inline v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term) {
+  term_ref_t * term_ref = (term_ref_t *) enif_alloc(sizeof(term_ref_t));	
+  term_ref->env = enif_alloc_env();										
+  term_ref->term = enif_make_copy(term_ref->env, term);
+  v8::Persistent<v8::External> obj = v8::Persistent<v8::External>::New(v8::External::New(term_ref));
+  obj.MakeWeak(NULL,weak_external_cleaner);
+  return obj;
+}
+
+inline ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val) {
+	term_ref_t * term_ref = (term_ref_t *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(val));
+	return term_ref->term;
+}
 
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
-  ERL_NIF_TERM term = enif_make_copy(vm->env,(ERL_NIF_TERM) arguments.Data()->ToInteger()->Value());
+  ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(arguments.Data()));
 
   vm_res_t *ptr = (vm_res_t *)enif_alloc_resource(vm_resource, sizeof(vm_res_t));
   ptr->vm = vm;
@@ -581,13 +607,6 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   return vm->ticker(ref, &arguments);
 };
 
-
-void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
-  if (object.IsNearDeath()) {
-	ERL_NIF_TERM * term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(object));
-	enif_free(term_ref);
-  }
-}
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
@@ -730,15 +749,11 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
 
   } else if (enif_is_fun(env, term)) {
-    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,v8::Integer::NewFromUnsigned(term));
+    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,term_to_external(term));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	return f;
   } else if ((enif_is_pid(env, term)) || (enif_is_ref(env,term))) {
-	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) enif_alloc(sizeof(ERL_NIF_TERM));
-	*term_ref = term;
-	v8::Persistent<v8::External> obj = v8::Persistent<v8::External>::New(v8::External::New(term_ref));
-	obj.MakeWeak(NULL,weak_external_cleaner);
-	return obj;
+	return term_to_external(term);
   }
   return v8::Undefined(); // if nothing else works, return undefined
 };
@@ -808,9 +823,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 
 	return term;
   } else if (val->IsExternal()) { // passing terms
-	ERL_NIF_TERM *term_ref = (ERL_NIF_TERM *) v8::External::Unwrap(val);
-	ERL_NIF_TERM term = *term_ref;
-	return term;
+	return enif_make_copy(env,external_to_term(val));
   } else {
 	return enif_make_atom(env,"$unknown");
   }
