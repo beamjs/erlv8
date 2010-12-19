@@ -12,7 +12,7 @@ new(O) ->
 	{erlv8_array, O, undefined}.
 
 length() ->
-	length(list()). %% TODO: I guess it will be more efficient if we haf a NIF for that?
+	length(list()). %% TODO: I guess it will be more efficient if we had a NIF for that?
 
 push(Val) ->
 	M = {?BASE_MODULE, Resource, VM},
