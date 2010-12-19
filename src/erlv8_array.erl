@@ -1,6 +1,6 @@
 -module(erlv8_array,[Resource,VM]).
 -extends(erlv8_object).
--export([list/0,object/0,new/1, length/0, push/1, unshift/1]).
+-export([list/0,object/0,new/1, length/0, push/1, unshift/1, delete/1]).
 
 list() ->
 	erlv8_nif:to_list(Resource).
@@ -25,3 +25,15 @@ unshift(Val) ->
 						  M:set_value(L-I,M:get_value(L-I-1))
 				  end, lists:seq(0,L-1)),
 	M:set_value(0,Val).
+
+delete(Index) ->
+	M = {?BASE_MODULE, Resource, VM},
+	L = length(),
+	V = M:get_value(Index),
+	lists:foreach(fun (I) ->
+						  M:set_value(I,M:get_value(I+1))
+				  end, lists:seq(Index,L-1)),
+	M:set_value(length,L-1),
+	V.
+	
+	

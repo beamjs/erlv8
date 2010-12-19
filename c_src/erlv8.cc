@@ -478,6 +478,23 @@ static ERL_NIF_TERM object_get_proto(ErlNifEnv *env, int argc, const ERL_NIF_TER
   };
 };
 
+static ERL_NIF_TERM object_delete(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  val_res_t *res;
+  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
+	LHCS(res->ctx);
+	v8::Handle<v8::Value> key = term_to_js(env,argv[1]);
+	if (key->IsString()) {
+	  res->val->ToObject()->Delete(key->ToString());
+	} else if (key->IsNumber()) {
+	  res->val->ToObject()->Delete(key->Uint32Value());
+	}
+	return enif_make_atom(env,"ok");
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+
 static ERL_NIF_TERM value_equals(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res1; 
   val_res_t *res2; 
@@ -518,6 +535,7 @@ static ErlNifFunc nif_funcs[] =
   {"object_get_hidden",2, object_get_hidden},
   {"object_set_proto",2, object_set_proto},
   {"object_get_proto",1, object_get_proto},
+  {"object_delete",2, object_delete},
   {"value_equals",2, value_equals},
   {"value_strict_equals",2, value_strict_equals},
   {"value_taint",2, value_taint}

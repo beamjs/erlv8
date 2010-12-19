@@ -2,7 +2,7 @@
 -on_load(init/0).
 
 -export([new_vm/0,set_server/2,global/1,to_string/2,to_detail_string/2,tick/3,to_proplist/1,to_list/1,object_set/3,object_get/2,
-		 object_set_hidden/3, object_get_hidden/2,object_set_proto/2, object_get_proto/1,value_equals/2, value_strict_equals/2,
+		 object_set_hidden/3, object_get_hidden/2,object_set_proto/2, object_get_proto/1, object_delete/2, value_equals/2, value_strict_equals/2,
 		 value_taint/2]).
 
 init() ->
@@ -59,7 +59,10 @@ object_get_hidden(_ObjectRes, _Key) ->
 object_set_proto(_ObjectRes, _ProtoObjectRes) ->
 	error(not_loaded).
 
-object_get_proto(_ObjectRe) ->
+object_get_proto(_ObjectRes) ->
+	error(not_loaded).
+
+object_delete(_ObjectRes, _Key) ->
 	error(not_loaded).
 
 value_equals(_Val1,_Val2) ->

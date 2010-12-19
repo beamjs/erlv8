@@ -441,5 +441,20 @@ array_unshift_test() ->
 	?assertEqual([4,1,2,3],A:list()),
 	stop().
 
+object_deletion_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	O = erlv8_vm:taint(VM,?V8Obj([{"a",1},{"b", 2}])),
+	O:delete("a"),
+	?assertEqual(undefined, O:get_value("a")),
+	stop().
+
+array_deletion_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	A = erlv8_vm:taint(VM,?V8Arr([1,2,3])),
+	A:delete(0),
+	?assertEqual([2,3], A:list()),
+	stop().
 
 -endif.
