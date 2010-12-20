@@ -471,4 +471,30 @@ vm_storage_test() ->
 	?assertEqual("Data",erlv8_vm:retr(VM, {my_mod, data})),
 	stop().
 
+getter_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	true = Global:set_accessor("getter_value", fun (#erlv8_fun_invocation{} = _Invocation, [Prop]) ->
+													   Prop
+											   end),
+	?assertEqual("getter_value",Global:get_value_nb("getter_value")),
+	stop().
+
+setter_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:new(),
+	Global = erlv8_vm:global(VM),
+	true = Global:set_accessor("setter_value", fun (#erlv8_fun_invocation{ this = This } = _Invocation, [_Prop]) ->
+													   This:get_value_nb("val")
+											   end,
+							   fun (#erlv8_fun_invocation{ this = This } = _Invocation, [_Prop, Val]) ->
+									   ?debugVal(Val),
+									   This:set_value_nb("val",Val)
+							   end),
+	Global:set_value_nb("setter_value", 1),
+	?assertEqual(1,Global:get_value_nb("setter_value")),
+	stop().
+	
+
 -endif.

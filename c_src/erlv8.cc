@@ -154,10 +154,10 @@ public:
 	  v8::Locker locker;
 	  v8::HandleScope handle_scope;
 	}
-	ticker(0,0);
+	ticker(0);
   };
 
-  v8::Handle<v8::Value> ticker(ERL_NIF_TERM ref,const v8::Arguments *arguments) {
+  v8::Handle<v8::Value> ticker(ERL_NIF_TERM ref) {
 	v8::Locker locker;
 	v8::Context::Scope context_scope(context);
 
@@ -224,6 +224,36 @@ public:
 			delete [] args;
 			args = NULL;
 		  }
+		} else if (!strcmp(name,"get")) {
+		  ErlNifEnv *msg_env = enif_alloc_env();
+		  ERL_NIF_TERM get_ref = enif_make_copy(msg_env, tick_ref);
+		  val_res_t *obj_res;
+		  if (enif_get_resource(env,array[1],val_resource,(void **)(&obj_res))) {
+			
+			v8::Local<v8::Value> get_result = obj_res->val->ToObject()->Get(term_to_js(env,array[2]));
+			
+			SEND(server,
+				 enif_make_tuple3(env,
+								  enif_make_atom(env,"result"),
+								  enif_make_copy(env,get_ref),
+								  js_to_term(env,get_result)));
+		  }
+		  enif_free_env(msg_env);
+		} else if (!strcmp(name,"set")) {
+		  ErlNifEnv *msg_env = enif_alloc_env();
+		  ERL_NIF_TERM set_ref = enif_make_copy(msg_env, tick_ref);
+		  val_res_t *obj_res;
+		  if (enif_get_resource(env,array[1],val_resource,(void **)(&obj_res))) {
+
+		  	obj_res->val->ToObject()->Set(term_to_js(env,array[2]),term_to_js(env,array[3]));
+			
+			SEND(server,
+				 enif_make_tuple3(env,
+								  enif_make_atom(env,"result"),
+								  enif_make_copy(env,set_ref),
+								  enif_make_copy(env,array[3])));
+		  } 
+		  enif_free_env(msg_env);
 		} else if (!strcmp(name,"script")) { 
 		  ErlNifEnv *msg_env = enif_alloc_env();
 		  ERL_NIF_TERM script_ref = enif_make_copy(msg_env, tick_ref);
@@ -499,6 +529,51 @@ static ERL_NIF_TERM object_delete(ErlNifEnv *env, int argc, const ERL_NIF_TERM a
   };
 };
 
+v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info); // fwd
+void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info); // fwd
+inline v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term); // fwd
+
+void weak_accessor_data_cleaner(v8::Persistent<v8::Value> object, void * data) {
+  if (object.IsNearDeath()) {
+	object->ToObject()->DeleteHiddenValue(v8::String::New("_getter"));
+	object->ToObject()->DeleteHiddenValue(v8::String::New("_setter"));
+  }
+}
+
+static ERL_NIF_TERM object_set_accessor(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  val_res_t *res;
+  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
+	LHCS(res->ctx);
+	if (argc > 2) {
+	  v8::Handle<v8::Value> name = term_to_js(env,argv[1]);
+	  if (!name->IsString()) 
+		return enif_make_badarg(env);
+
+	  v8::AccessorGetter getter = GetterFun;
+	  v8::AccessorSetter setter = 0;
+	  v8::Persistent<v8::Object> data = v8::Persistent<v8::Object>::New(v8::Object::New());
+	  data.MakeWeak(NULL,weak_accessor_data_cleaner); // so that we'll release externals when we're done
+
+	  if (term_to_js(env,argv[2])->IsUndefined()) {
+		return enif_make_badarg(env);
+	  } else {
+		data->SetHiddenValue(v8::String::New("_getter"), term_to_external(argv[2]));
+	  }
+
+	  if (argc > 3) {
+		setter = SetterFun;
+		data->SetHiddenValue(v8::String::New("_setter"), term_to_external(argv[3]));
+	  }
+
+	  return enif_make_atom(env, res->val->ToObject()->SetAccessor(name->ToString(), getter, setter, data) ? "true" : "false");
+	} else {
+	  return enif_make_badarg(env);
+	}
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
 
 static ERL_NIF_TERM value_equals(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res1; 
@@ -541,6 +616,11 @@ static ErlNifFunc nif_funcs[] =
   {"object_set_proto",2, object_set_proto},
   {"object_get_proto",1, object_get_proto},
   {"object_delete",2, object_delete},
+  {"object_set_accessor", 3, object_set_accessor},
+  {"object_set_accessor", 4, object_set_accessor},
+  {"object_set_accessor", 5, object_set_accessor},
+  {"object_set_accessor", 6, object_set_accessor},
+  {"object_set_accessor", 7, object_set_accessor},
   {"value_equals",2, value_equals},
   {"value_strict_equals",2, value_strict_equals},
   {"value_taint",2, value_taint}
@@ -604,9 +684,74 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server)),
 						enif_make_copy(env,arglist)));
-  return vm->ticker(ref, &arguments);
+  return vm->ticker(ref);
 };
 
+v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info) {
+  v8::HandleScope handle_scope;
+  VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
+
+  v8::Local<v8::Object> data = info.Data()->ToObject();
+  
+  ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(data->GetHiddenValue(v8::String::New("_getter"))));
+
+  // each call gets a unique ref
+  ERL_NIF_TERM ref = enif_make_ref(vm->env);
+
+  // prepare arguments
+  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * 1);
+  arr[0] = js_to_term(vm->env, property);
+  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,1);
+  free(arr);
+
+  // send invocation request
+  SEND(vm->server,
+	   enif_make_tuple3(env,
+						enif_make_copy(env,term),
+						enif_make_tuple6(env, 
+										 enif_make_atom(env,"erlv8_fun_invocation"),
+										 enif_make_atom(env,"false"),
+										 js_to_term(env, info.Holder()),
+										 js_to_term(env, info.This()),
+										 enif_make_copy(env, ref),
+										 enif_make_pid(env, vm->server)),
+						enif_make_copy(env,arglist)));
+  return vm->ticker(ref);  
+}
+
+void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info) {
+  cout << "Setter" << endl;
+
+  v8::HandleScope handle_scope;
+  VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
+
+  v8::Local<v8::Object> data = info.Data()->ToObject();
+  ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(data->GetHiddenValue(v8::String::New("_setter"))));
+
+  // each call gets a unique ref
+  ERL_NIF_TERM ref = enif_make_ref(vm->env);
+
+  // prepare arguments
+  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * 2);
+  arr[0] = js_to_term(vm->env, property);
+  arr[1] = js_to_term(vm->env, value);
+  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,2);
+  free(arr);
+
+  // send invocation request
+  SEND(vm->server,
+	   enif_make_tuple3(env,
+						enif_make_copy(env,term),
+						enif_make_tuple6(env, 
+										 enif_make_atom(env,"erlv8_fun_invocation"),
+										 enif_make_atom(env,"false"),
+										 js_to_term(env, info.Holder()),
+										 js_to_term(env, info.This()),
+										 enif_make_copy(env, ref),
+										 enif_make_pid(env, vm->server)),
+						enif_make_copy(env,arglist)));
+  vm->ticker(ref);  
+}
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
