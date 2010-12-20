@@ -319,8 +319,8 @@ register(Server, Name, Mod) when is_function(Mod) ->
 run(Server, Source) ->
 	run(Server, Source, {"unknown",0,0}).
 
-run(Server, Source, {Name, ColumnOffset, LineOffset}) ->
-	gen_server2:call(Server, {script, Source, Name, ColumnOffset, LineOffset}, infinity).
+run(Server, Source, {Name, LineOffset, ColumnOffset}) ->
+	gen_server2:call(Server, {script, Source, Name, LineOffset, ColumnOffset}, infinity).
 
 global(Server) ->
 	gen_server2:call(Server, global, infinity).
