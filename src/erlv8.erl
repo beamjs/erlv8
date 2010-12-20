@@ -144,7 +144,7 @@ js_to_term_fun_test() ->
 	{ok, VM} = erlv8_vm:new(),
 	erlv8_vm:run(VM,"x = function () {}"),
 	Global = erlv8_vm:global(VM),
-	{erlv8_fun,_,VM} = Global:get_value("x"),
+	#erlv8_fun{vm=VM} = Global:get_value("x"),
 	stop().
 
 js_object_to_term_fun_test() ->
@@ -161,7 +161,7 @@ term_to_js_object_fun_erlv8_fun_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
 	Global = erlv8_vm:global(VM),
-	{ok, {erlv8_fun,_, VM}=Fun} = erlv8_vm:run(VM,"x = function () {}; x.a = 1; x"),
+	{ok, #erlv8_fun{vm=VM}=Fun} = erlv8_vm:run(VM,"x = function () {}; x.a = 1; x"),
 	O = Fun:object(),
 	?assertEqual([{"a",1}],O:proplist()),
 	Global:set_value("y",Fun),
@@ -252,7 +252,7 @@ fun_returning_fun_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
 	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
-	{ok, {erlv8_fun, _, VM}=F} = erlv8_vm:run(VM,"f = function() {}; test(f);"),
+	{ok, #erlv8_fun{vm=VM}=F} = erlv8_vm:run(VM,"f = function() {}; test(f);"),
 	O = F:object(),
 	?assertEqual([],O:proplist()),
 	stop().
@@ -406,7 +406,7 @@ equality_test() ->
 taint_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:new(),
-	?assertMatch({erlv8_object, _, _},erlv8_vm:taint(VM, ?V8Obj([{"a",1}]))),
+	?assertMatch(#erlv8_object{},erlv8_vm:taint(VM, ?V8Obj([{"a",1}]))),
 	stop().
 
 fun_extends_object_test() ->	
@@ -494,6 +494,6 @@ setter_test() ->
 	Global:set_value("setter_value", 1),
 	?assertEqual(1,Global:get_value("setter_value")),
 	stop().
-	
+
 
 -endif.
