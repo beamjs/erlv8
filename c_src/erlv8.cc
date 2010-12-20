@@ -118,7 +118,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 	  v8::Handle<v8::Value> result;
 	  unsigned int i = 0;
 	  bool stop_flag = false;
-	  // TickHandlerResolution resolution;
+
 	  while (!stop_flag) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
