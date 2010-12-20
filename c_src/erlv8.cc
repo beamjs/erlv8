@@ -480,6 +480,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 	arr[i] = js_to_term(vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
   }
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,array->Length());
+  free(arr);
   // send invocation request
   SEND(vm->server,
 	   enif_make_tuple3(env,
