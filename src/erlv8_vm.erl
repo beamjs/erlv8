@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,new/0,run/2,register/2,register/3,global/1,add_handler/3,stop/1,
+-export([start_link/1,new/0,run/2,run/3,register/2,register/3,global/1,add_handler/3,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
@@ -112,7 +112,7 @@ handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked
 handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
 	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
 
-handle_call({script, _Source}=Tick, From, #state{ requests = Requests } = State) ->
+handle_call({script, _Source, _, _, _}=Tick, From, #state{ requests = Requests } = State) ->
 	Ref = make_ref(),
 	Self = self(),
 	spawn(fun () -> next_tick(Self,Tick, Ref) end),
@@ -317,7 +317,10 @@ register(Server, Name, Mod) when is_function(Mod) ->
 	Global:set_value(Name, Mod()).
 
 run(Server, Source) ->
-	gen_server2:call(Server, {script, Source}, infinity).
+	run(Server, Source, {"unknown",0,0}).
+
+run(Server, Source, {Name, ColumnOffset, LineOffset}) ->
+	gen_server2:call(Server, {script, Source, Name, ColumnOffset, LineOffset}, infinity).
 
 global(Server) ->
 	gen_server2:call(Server, global, infinity).

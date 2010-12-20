@@ -7,12 +7,17 @@ TickHandler(ScriptTickHandler) {
   enif_get_list_length(vm->env, array[1], &len);
   char * buf = (char *) malloc(len + 1);
   enif_get_string(vm->env,array[1],buf,len + 1, ERL_NIF_LATIN1);
-  
+
   v8::TryCatch try_catch;
+
+  v8::ScriptOrigin * origin = new v8::ScriptOrigin(term_to_js(vm->env,array[2])->ToString(),
+												   term_to_js(vm->env,array[3])->ToInteger(),
+												   term_to_js(vm->env,array[4])->ToInteger());
   
   v8::Handle<v8::String> script = v8::String::New(buf, len);
-  v8::Handle<v8::Script> compiled = v8::Script::Compile(script);
+  v8::Handle<v8::Script> compiled = v8::Script::Compile(script,origin);
   
+  delete origin;
   
   if (compiled.IsEmpty()) {
 	SEND(vm->server,
