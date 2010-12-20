@@ -5,7 +5,7 @@
 
 %% API
 -export([start_link/1,new/0,run/2,register/2,register/3,global/1,add_handler/3,stop/1,
-		 to_string/2,to_detail_string/2,taint/2,next_tick/2, next_tick/3, next_tick/4,
+		 to_string/2,to_detail_string/2,taint/2,untaint/1,next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
 %% gen_server2 callbacks
@@ -351,3 +351,19 @@ stor(Server, Key, Value) ->
 
 retr(Server, Key) ->
 	gen_server2:call(Server, {retr, Key}).
+
+
+untaint({erlv8_object, _,_}=O) ->
+	{erlv8_object,lists:map(fun ({Key, Val}) ->
+									{Key, untaint(Val)}
+							end,O:proplist()), undefined};
+untaint({erlv8_array, _,_}=O) ->
+	{erlv8_array,lists:map(fun untaint/1,O:list()), undefined};
+untaint({erlv8_fun, _,_}=F) -> %% broken
+	{erlv8_object,untaint(F:object()),undefined};
+untaint([H|T]) ->
+	[untaint(H)|untaint(T)];
+untaint([]) ->
+	[];
+untaint(Other) ->
+	Other.
