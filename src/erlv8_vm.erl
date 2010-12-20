@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,new/0,run/2,run/3,register/2,register/3,global/1,add_handler/3,stop/1,
+-export([start_link/1,start/0,run/2,run/3,register/2,register/3,global/1,add_handler/3,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
@@ -298,7 +298,7 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Public functions
 %%%===================================================================
-new() ->
+start() ->
 	VM = erlv8_nif:new_vm(),
 	supervisor2:start_child(erlv8_sup,[VM]).
 
