@@ -720,8 +720,6 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
 }
 
 void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info) {
-  cout << "Setter" << endl;
-
   v8::HandleScope handle_scope;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
 

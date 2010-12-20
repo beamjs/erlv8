@@ -489,7 +489,6 @@ setter_test() ->
 													   This:get_value_nb("val")
 											   end,
 							   fun (#erlv8_fun_invocation{ this = This } = _Invocation, [_Prop, Val]) ->
-									   ?debugVal(Val),
 									   This:set_value_nb("val",Val)
 							   end),
 	Global:set_value_nb("setter_value", 1),
