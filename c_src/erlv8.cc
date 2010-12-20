@@ -282,27 +282,6 @@ static ERL_NIF_TERM to_list(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
   return enif_make_badarg(env);
 };
 
-static ERL_NIF_TERM object_set(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	res->val->ToObject()->Set(term_to_js(env,argv[1]),term_to_js(env,argv[2]));
-	return argv[2];
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
-static ERL_NIF_TERM object_get(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	return js_to_term(env, res->val->ToObject()->Get(term_to_js(env,argv[1])));
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
 static ERL_NIF_TERM object_set_hidden(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
   if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
@@ -440,8 +419,6 @@ static ErlNifFunc nif_funcs[] =
   {"to_proplist",1, to_proplist},
   {"to_list",1, to_list},
   {"tick",3, tick},
-  {"object_set",3, object_set},
-  {"object_get",2, object_get},
   {"object_set_hidden",3, object_set_hidden},
   {"object_get_hidden",2, object_get_hidden},
   {"object_set_proto",2, object_set_proto},

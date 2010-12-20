@@ -478,7 +478,7 @@ getter_test() ->
 	true = Global:set_accessor("getter_value", fun (#erlv8_fun_invocation{} = _Invocation, [Prop]) ->
 													   Prop
 											   end),
-	?assertEqual("getter_value",Global:get_value_nb("getter_value")),
+	?assertEqual("getter_value",Global:get_value("getter_value")),
 	stop().
 
 setter_test() ->
@@ -486,13 +486,13 @@ setter_test() ->
 	{ok, VM} = erlv8_vm:new(),
 	Global = erlv8_vm:global(VM),
 	true = Global:set_accessor("setter_value", fun (#erlv8_fun_invocation{ this = This } = _Invocation, [_Prop]) ->
-													   This:get_value_nb("val")
+													   This:get_value("val")
 											   end,
 							   fun (#erlv8_fun_invocation{ this = This } = _Invocation, [_Prop, Val]) ->
-									   This:set_value_nb("val",Val)
+									   This:set_value("val",Val)
 							   end),
-	Global:set_value_nb("setter_value", 1),
-	?assertEqual(1,Global:get_value_nb("setter_value")),
+	Global:set_value("setter_value", 1),
+	?assertEqual(1,Global:get_value("setter_value")),
 	stop().
 	
 

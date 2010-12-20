@@ -1,7 +1,7 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([new_vm/0,set_server/2,global/1,to_string/2,to_detail_string/2,tick/3,to_proplist/1,to_list/1,object_set/3,object_get/2,
+-export([new_vm/0,set_server/2,global/1,to_string/2,to_detail_string/2,tick/3,to_proplist/1,to_list/1,
 		 object_set_hidden/3, object_get_hidden/2,object_set_proto/2, object_get_proto/1, object_delete/2, 
 		 object_set_accessor/3, object_set_accessor/4, object_set_accessor/5, object_set_accessor/6, object_set_accessor/7,
 		 value_equals/2, value_strict_equals/2, value_taint/2]).
@@ -43,12 +43,6 @@ to_proplist(_ObjectRes) ->
 	error(not_loaded).
 
 to_list(_ObjectRes) ->
-	error(not_loaded).
-
-object_set(_ObjectRes, _Key, _Value) ->
-	error(not_loaded).
-
-object_get(_ObjectRes, _Key) ->
 	error(not_loaded).
 
 object_set_hidden(_ObjectRes, _Key, _Value) ->
