@@ -502,12 +502,9 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
   ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(arguments.Data()));
-
-  vm_res_t *ptr = (vm_res_t *)enif_alloc_resource(vm_resource, sizeof(vm_res_t));
-  ptr->vm = vm;
-
-  ctx_res_t *ptr1 = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-  ptr1->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+ 
+  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
+  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 
   v8::Local<v8::Array> array = v8::Array::New(arguments.Length());
 
@@ -534,10 +531,10 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 										 js_to_term(env, arguments.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
-										 enif_make_resource(env, ptr1)
+										 enif_make_resource(env, ptr)
 										 ),
 						enif_make_copy(env,arglist)));
-  enif_release_resource(ptr1);
+  enif_release_resource(ptr);
   return vm->ticker(ref);
 };
 
