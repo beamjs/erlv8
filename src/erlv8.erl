@@ -519,4 +519,16 @@ run_multi_ctx_test() ->
 	?assertEqual(undefined,NewGlobal1:get_value("x")),
 	stop().
 
+ctx_fun_invocation_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	NewCtx = erlv8_context:new(VM),
+	NewGlobal = erlv8_context:global(NewCtx),
+	NewGlobal:set_value("f",fun (#erlv8_fun_invocation{}=I,[]) -> G= I:global(), G:set_value("x",1) end),
+	erlv8_vm:run(VM,NewCtx,"f()"),
+	?assertEqual(1,NewGlobal:get_value("x")),
+	?assertEqual(undefined,Global:get_value("x")),
+	stop().
+
 -endif.

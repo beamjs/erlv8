@@ -3,7 +3,8 @@
 		  holder,
 		  this,
 		  ref,
-		  vm
+		  vm,
+		  ctx
 		 }).
 		  
 -define(V8Obj(X),erlv8_object:new(X)).
