@@ -76,11 +76,11 @@ void VM::requestTick() {
 };
 
 void VM::waitForTick() {
+  enif_mutex_lock(tick_cond_mtx);
   while (!ticked) { // according to erl_nif/driver documentation, enif_cond_wait might return before the cond was broadcasted
-	enif_mutex_lock(tick_cond_mtx);
 	enif_cond_wait(tick_cond,tick_cond_mtx);
-	enif_mutex_unlock(tick_cond_mtx);
   }
+  enif_mutex_unlock(tick_cond_mtx);
   ticked = 0;
 };
 
