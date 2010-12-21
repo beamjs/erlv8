@@ -1,4 +1,6 @@
 X64=$(shell file -L `which epmd` | grep x86_64 | wc -l | xargs echo)
+X64L=$(shell file -L `which epmd` | grep x86-64 | wc -l | xargs echo)
+
 
 
 ifeq ($(X64),1)
@@ -6,6 +8,13 @@ V8FLAGS=arch=x64
 else
 V8FLAGS=
 endif
+
+ifeq ($(X64L),1)
+V8FLAGS=arch=x64
+else
+V8FLAGS=
+endif
+
 
 all: compile 
 
