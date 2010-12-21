@@ -12,8 +12,6 @@ endif
 ifeq ($(X64L),1)
 V8FLAGS=arch=x64
 V8ENV=CCFLAGS=-fPIC
-else
-V8FLAGS=
 endif
 
 
