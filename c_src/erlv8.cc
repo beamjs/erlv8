@@ -255,10 +255,10 @@ static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
 	context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(res->vm));
 
 	ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-	ptr->ctx = res->vm->context;
+	ptr->ctx = context;
 	
 	ERL_NIF_TERM term = enif_make_resource(env, ptr);
-
+	
 	enif_release_resource(ptr);
 	
 	return term;

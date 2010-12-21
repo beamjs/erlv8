@@ -5,7 +5,7 @@ TickHandler(SetTickHandler) {
   ERL_NIF_TERM set_ref = enif_make_copy(ref_env, vm->tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
-	
+	LHCS(obj_res->ctx);
 	obj_res->val->ToObject()->Set(term_to_js(vm->env,array[2]),term_to_js(vm->env,array[3]));
 	
 	SEND(vm->server,

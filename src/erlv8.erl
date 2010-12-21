@@ -501,10 +501,22 @@ run_new_ctx_test() ->
 	Global = erlv8_vm:global(VM),
 	Global:set_value("x",1),
 	NewCtx = erlv8_context:new(VM),
-	erlv8_vm:run(VM,NewCtx,"x={a:1}"),
 	NewGlobal = erlv8_context:global(NewCtx),
+	erlv8_vm:run(VM,NewCtx,"x={a:1}"),
 	T = NewGlobal:get_value("x"),
 	?assertEqual(1,T:get_value("a")),
+	stop().
+
+run_multi_ctx_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("x",1),
+	NewCtx = erlv8_context:new(VM),
+	NewCtx1 = erlv8_context:new(VM),
+	erlv8_vm:run(VM,NewCtx,"x={a:1}"),
+	NewGlobal1 = erlv8_context:global(NewCtx1),
+	?assertEqual(undefined,NewGlobal1:get_value("x")),
 	stop().
 
 -endif.
