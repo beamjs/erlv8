@@ -11,6 +11,7 @@ endif
 
 ifeq ($(X64L),1)
 V8FLAGS=arch=x64
+V8ENV=CCFLAGS=-fPIC
 else
 V8FLAGS=
 endif
@@ -23,7 +24,7 @@ deps/v8/.git/config:
 	@git submodule update
 
 deps/v8/libv8.a: deps/v8/.git/config
-	@cd deps/v8 && scons $(V8FLAGS)
+	@cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
 dependencies: deps/v8/libv8.a
 
