@@ -495,5 +495,16 @@ setter_test() ->
 	?assertEqual(1,Global:get_value("setter_value")),
 	stop().
 
+run_new_ctx_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("x",1),
+	NewCtx = erlv8_context:new(VM),
+	erlv8_vm:run(VM,NewCtx,"x={a:1}"),
+	NewGlobal = erlv8_context:global(NewCtx),
+	T = NewGlobal:get_value("x"),
+	?assertEqual(1,T:get_value("a")),
+	stop().
 
 -endif.

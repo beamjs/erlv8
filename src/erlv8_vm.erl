@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,start/0,run/2,run/3,register/2,register/3,global/1,add_handler/3,stop/1,
+-export([start_link/1,start/0,run/2,run/3,run/4,register/2,register/3,global/1,add_handler/3,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
@@ -22,7 +22,8 @@
 		  ticked = [],
 		  flush_tick = false,
 		  event_mgr,
-		  storage = []
+		  storage = [],
+		  context
 		 }).
 
 %%%===================================================================
@@ -58,7 +59,8 @@ init([VM]) ->
 	process_flag(trap_exit, true),
 	{ok, EventPid} = gen_event:start_link(),
 	erlv8_nif:set_server(VM, self()),
-	{ok, #state{vm = VM, ticks = queue:new(), event_mgr = EventPid}}.
+	Ctx = erlv8_nif:context(VM),
+	{ok, #state{vm = VM, ticks = queue:new(), event_mgr = EventPid, context = Ctx}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -87,8 +89,14 @@ handle_call({retr, Key}, _From, #state{ storage = Storage } = State) ->
 handle_call({taint, Value}, _From, #state{ vm = VM } = State) ->
 	{reply, erlv8_nif:value_taint(VM,Value), State};
 
-handle_call(global, _From, #state{ vm = VM } = State) ->
-	{reply, erlv8_nif:global(VM), State};
+handle_call(context, _From, #state{} = State) ->
+	{reply, {self(), State#state.context}, State};
+
+handle_call(new_context, _From, #state{ vm = VM } = State) ->
+	{reply, {self(), erlv8_nif:new_context(VM)}, State};
+
+handle_call({global, Resource}, _From, #state{} = State) ->
+	{reply, erlv8_nif:global(Resource), State};
 
 handle_call({to_string, Val}, _From, #state { vm = VM } = State) ->
 	Reply = erlv8_nif:to_string(VM, Val),
@@ -112,11 +120,12 @@ handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked
 handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
 	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
 
-handle_call({script, _Source, _, _, _}=Tick, From, #state{ requests = Requests } = State) ->
+handle_call({script, _CtxRes, _Source, _, _, _}=Tick, From, #state{ requests = Requests } = State) ->
 	Ref = make_ref(),
 	Self = self(),
 	spawn(fun () -> next_tick(Self,Tick, Ref) end),
 	{noreply, State#state{ requests = [{Ref, From}|Requests] }};
+
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
@@ -317,13 +326,17 @@ register(Server, Name, Mod) when is_function(Mod) ->
 	Global:set_value(Name, Mod()).
 
 run(Server, Source) ->
-	run(Server, Source, {"unknown",0,0}).
+	run(Server, erlv8_context:get(Server), Source).
 
-run(Server, Source, {Name, LineOffset, ColumnOffset}) ->
-	gen_server2:call(Server, {script, Source, Name, LineOffset, ColumnOffset}, infinity).
+run(Server, {_, _CtxRes} = Context, Source) ->
+	run(Server, Context, Source, {"unknown",0,0}).
+
+run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
+	gen_server2:call(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}, infinity).
 
 global(Server) ->
-	gen_server2:call(Server, global, infinity).
+	Ctx = erlv8_context:get(Server),
+	erlv8_context:global(Ctx).
 
 stop(Server) ->
 	gen_server2:call(Server,stop).

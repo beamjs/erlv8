@@ -25,6 +25,10 @@ typedef struct _term_ref_t {
   ERL_NIF_TERM term;
 } term_ref_t;
 
+typedef struct _ctx_res_t { 
+  v8::Persistent<v8::Context> ctx;
+} ctx_res_t;
+
 
 // Helpers
 #define LHCS(ctx) v8::Locker locker; \
@@ -41,8 +45,10 @@ typedef struct _term_ref_t {
 
 
 // Statics
+extern v8::Persistent<v8::ObjectTemplate> global_template;
 extern ErlNifResourceType * vm_resource;
 extern ErlNifResourceType * val_resource;
+extern ErlNifResourceType * ctx_resource;
 //
 
 // VM
@@ -73,7 +79,7 @@ public:
 
 enum TickHandlerResolution { DONE, RETURN, NEXT };
 
-#define TickHandler(name) TickHandlerResolution name(VM * vm, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
+#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
 
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);

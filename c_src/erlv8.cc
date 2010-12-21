@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-typedef TickHandlerResolution (*TickHandler)(VM *, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
+typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
 
 struct ErlV8TickHandler {
   const char * name;
@@ -17,8 +17,6 @@ static ErlV8TickHandler tick_handlers[] =
   {"script", ScriptTickHandler},
   {NULL, UnknownTickHandler} 
 };
-
-static v8::Persistent<v8::ObjectTemplate> global_template;
 
 int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 {
@@ -122,7 +120,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 	  while (!stop_flag) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
-		  switch (tick_handlers[i].handler(this, ref, arity, array, result)) {
+		  switch (tick_handlers[i].handler(this, name, ref, arity, array, result)) {
 		  case DONE:
 			stop_flag = true;
 			break;
@@ -135,6 +133,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 		}
 		i++;
 	  }
+	  free(name);
 	}
   }
 };
@@ -173,6 +172,24 @@ static ERL_NIF_TERM set_server(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv
 	enif_get_local_pid(env, argv[1], res->vm->server);
 	enif_thread_create((char *)"erlv8", &res->vm->tid, start_vm, res->vm, NULL);
 	return enif_make_atom(env,"ok");
+  };
+  return enif_make_badarg(env);
+};
+
+static ERL_NIF_TERM context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
+{
+  vm_res_t *res;
+  if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
+	LHCS(res->vm->context);
+
+	ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
+	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	
+	ERL_NIF_TERM term = enif_make_resource(env, ptr);
+
+	enif_release_resource(ptr);
+	
+	return term;
   };
   return enif_make_badarg(env);
 };
@@ -220,11 +237,31 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 };
 
 static ERL_NIF_TERM global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  ctx_res_t *res;
+  if (enif_get_resource(env,argv[0],ctx_resource,(void **)(&res))) {
+	LHCS(res->ctx);
+	v8::Handle<v8::Object> global = res->ctx->Global();
+	return js_to_term(env,global);
+  } else {
+	return enif_make_badarg(env);
+  };
+};
+
+static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   vm_res_t *res;
   if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
 	LHCS(res->vm->context);
-	v8::Handle<v8::Object> global = res->vm->context->Global();
-	return js_to_term(env,global);
+	v8::Persistent<v8::Context> context = v8::Context::New(NULL, global_template);
+	context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(res->vm));
+
+	ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
+	ptr->ctx = res->vm->context;
+	
+	ERL_NIF_TERM term = enif_make_resource(env, ptr);
+
+	enif_release_resource(ptr);
+	
+	return term;
   } else {
 	return enif_make_badarg(env);
   };
@@ -413,6 +450,8 @@ static ErlNifFunc nif_funcs[] =
 {
   {"new_vm", 0, new_vm},
   {"set_server", 2, set_server},
+  {"context", 1, context},
+  {"new_context", 1, new_context},
   {"global",1, global},
   {"to_string",2, to_string},
   {"to_detail_string",2, to_detail_string},
@@ -791,10 +830,17 @@ static void val_resource_destroy(ErlNifEnv* env, void* obj) {
   res->val.Dispose();
 };
 
+static void ctx_resource_destroy(ErlNifEnv* env, void* obj) {
+  ctx_res_t * res = reinterpret_cast<ctx_res_t *>(obj);
+  res->ctx.Dispose();
+};
+
+
 int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 {
   vm_resource = enif_open_resource_type(env, NULL, "erlv8_vm_resource", vm_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
   val_resource = enif_open_resource_type(env, NULL, "erlv8_val_resource", val_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
+  ctx_resource = enif_open_resource_type(env, NULL, "erlv8_ctx_resource", ctx_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
 
   v8::V8::Initialize();
   v8::HandleScope handle_scope;
@@ -812,6 +858,8 @@ void unload(ErlNifEnv *env, void* priv_data)
   global_template.Dispose();
 };
 
+v8::Persistent<v8::ObjectTemplate> global_template;
+ErlNifResourceType * ctx_resource;
 ErlNifResourceType * vm_resource;
 ErlNifResourceType * val_resource;
 
