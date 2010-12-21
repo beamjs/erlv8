@@ -54,13 +54,11 @@ VM::VM() {
   env = enif_alloc_env();
   tick_cond = enif_cond_create((char *)"erlv8_tick_condition");
   tick_cond_mtx = enif_mutex_create((char *)"erlv8_tick_condition_mutex");
-  {
-	v8::Locker locker;
-	v8::HandleScope handle_scope;
-	context = v8::Context::New(NULL, global_template);
-	v8::Context::Scope context_scope(context);
-	context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(this));
-  }
+  v8::Locker locker;
+  v8::HandleScope handle_scope;
+  context = v8::Context::New(NULL, global_template);
+  v8::Context::Scope context_scope(context);
+  context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(this));
 };
 
 VM::~VM() { 
@@ -83,10 +81,6 @@ void VM::waitForTick() {
 };
 
 void VM::run() {
-  {
-	v8::Locker locker;
-	v8::HandleScope handle_scope;
-  }
   ticker(0);
 };
 
