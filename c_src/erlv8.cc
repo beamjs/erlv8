@@ -65,7 +65,9 @@ VM::~VM() {
 	context.Dispose();
 	enif_free_env(env);
 	enif_cond_destroy(tick_cond);
-	//enif_mutex_unlock(tick_cond_mtx);
+#ifdef __APPLE__
+	enif_mutex_unlock(tick_cond_mtx);
+#endif
 	enif_mutex_destroy(tick_cond_mtx);
 };
 
