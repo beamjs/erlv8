@@ -26,6 +26,10 @@
 		  context
 		 }).
 
+-define(Error(Msg), lists:flatten(io_lib:format("~s: ~p",[Msg,Trace]))).
+-define(ErrorVal(Msg), lists:flatten(io_lib:format("~s: ~p ~p",[Msg,Val,Trace]))).
+
+
 %%%===================================================================
 %%% API
 %%%===================================================================
@@ -180,36 +184,36 @@ handle_info({F,#erlv8_fun_invocation{ ref = Ref } = Invocation,Args}, #state{} =
 	spawn(fun () ->
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
 				  case Result of 
-					  {'EXIT',{badarg, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Bad argument(s)"}}});
-					  {'EXIT',{function_clause, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "No matching function implementation"}}});
-					  {'EXIT',{{badmatch, _},_}} ->
-						  next_tick(Self, {result, Ref, {throw, "Bad match"}});
-					  {'EXIT',{badarith,_}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Bad arithmetic operation"}}});
-					  {'EXIT',{{case_clause, _},_}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "No case clause matched"}}});
-					  {'EXIT',{if_clause, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Bad formed if expression, no true branch found"}}});
-					  {'EXIT',{{try_clause, _}, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "No matching branch is found when evaluating the of-section of a try expression"}}});
-					  {'EXIT',{undef, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "The function cannot be found"}}});
-					  {'EXIT',{{badfun, _}, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Bad function"}}});
-					  {'EXIT',{{badarity,_}, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "A fun is applied to the wrong number of arguments"}}});
-					  {'EXIT',{timeout_value, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "The timeout value in a receive..after expression is evaluated to something else than an integer or infinity"}}});
-					  {'EXIT',{noproc, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Trying to link to a non-existing process"}}});
-					  {'EXIT',{{nocatch,_}, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Trying to evaluate a throw outside a catch"}}});
-					  {'EXIT',{system_limit, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "A system limit has been reached"}}});
-					  {'EXIT',{_, _}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, "Unknown error"}}});
+					  {'EXIT',{badarg, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad argument(s)")}}});
+					  {'EXIT',{function_clause, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("No matching function implementation")}}});
+					  {'EXIT',{{badmatch, Val}, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, ?ErrorVal("Bad match")}});
+					  {'EXIT',{badarith,Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad arithmetic operation")}}});
+					  {'EXIT',{{case_clause, Val},Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No case clause matched")}}});
+					  {'EXIT',{if_clause, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad formed if expression, no true branch found")}}});
+					  {'EXIT',{{try_clause, Val}, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No matching branch is found when evaluating the of-section of a try expression")}}});
+					  {'EXIT',{undef, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("The function cannot be found")}}});
+					  {'EXIT',{{badfun, Val}, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Bad function")}}});
+					  {'EXIT',{{badarity, Val}, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("A fun is applied to the wrong number of arguments")}}});
+					  {'EXIT',{timeout_value, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("The timeout value in a receive..after expression is evaluated to something else than an integer or infinity")}}});
+					  {'EXIT',{noproc, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Trying to link to a non-existing process")}}});
+					  {'EXIT',{{nocatch, Val}, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Trying to evaluate a throw outside a catch")}}});
+					  {'EXIT',{system_limit, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?Error("A system limit has been reached")}}});
+					  {'EXIT',{Val, Trace}} ->
+						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
 					  _ ->
 						  next_tick(Self, {result, Ref, Result})
 				  end
