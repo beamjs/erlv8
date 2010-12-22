@@ -540,5 +540,48 @@ fun_call_exception_test() ->
 	?assertEqual({throw, {error, "exc"}}, F:call()),
 	stop().
 
+js_parallel_fun_call_test_() ->
+	{timeout, 10, 
+	 fun () ->
+			 start(),
+			 {ok, VM} = erlv8_vm:start(),
+			 Global = erlv8_vm:global(VM),
+			 erlv8_vm:run(VM,"f = function (x) { return x }"),
+			 F = Global:get_value("f"),
+			 Self = self(),
+			 lists:map(fun (N) ->
+							   spawn(fun () -> X = F:call([N]), Self ! X  end)
+					   end, lists:seq(1,2)),
+			 ?assertEqual(lists:seq(1,2),lists:usort(parallel_call_test_loop(2,[]))),
+			 stop()
+	 end}.
+
+erl_parallel_fun_call_test_() ->
+	{timeout, 10, 
+	 fun () ->
+			 start(),
+			 {ok, VM} = erlv8_vm:start(),
+			 Global = erlv8_vm:global(VM),
+			 Global:set_value("f",fun (#erlv8_fun_invocation{},[N]) -> N end),
+			 F = Global:get_value("f"),
+			 Self = self(),
+			 lists:map(fun (N) ->
+							   spawn(fun () -> X = F:call([N]), Self ! X  end)
+					   end, lists:seq(1,2)),
+			 ?assertEqual(lists:seq(1,2),lists:usort(parallel_call_test_loop(2,[]))),
+			 stop()
+	 end}.
+
+parallel_call_test_loop(T,L) when length(L) == T ->
+	L;
+parallel_call_test_loop(T,L) ->
+	receive 
+		N when is_integer(N) ->
+			parallel_call_test_loop(T,[N|L]);
+		Other ->
+			error({bad_result, Other})
+	end.
+
+	
 
 -endif.
