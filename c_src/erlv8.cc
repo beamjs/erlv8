@@ -754,8 +754,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
   } else if (enif_is_fun(env, term)) {
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,term_to_external(term));
-	t->Set(v8::String::New("isNative"), term_to_external(term));
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
+	f->SetHiddenValue(v8::String::New("__erlv8__"), term_to_external(term));
 	return f;
   } else if ((enif_is_pid(env, term)) || (enif_is_ref(env,term))) {
 	return term_to_external(term);

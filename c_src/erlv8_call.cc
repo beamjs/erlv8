@@ -27,8 +27,7 @@ TickHandler(CallTickHandler) {
 	  recv = fun_res->ctx->Global();
 	}
 	v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(fun_res->val);
-
-	if ((f->Get((v8::String::New("isNative")))->IsUndefined())) { // js function
+	if (!*f->GetHiddenValue(v8::String::New("__erlv8__"))) { // js function
 	  v8::TryCatch try_catch;
 	  v8::Local<v8::Value> call_result = f->Call(recv, alen, args);
 	  if (call_result.IsEmpty()) {
@@ -55,7 +54,7 @@ TickHandler(CallTickHandler) {
 		array->Set(i,args[i]);
 	  }
 
-	  ErlangFun(vm, external_to_term(f->Get((v8::String::New("isNative")))), call_ref, recv, array);
+	  ErlangFun(vm, external_to_term(f->GetHiddenValue((v8::String::New("__erlv8__")))), call_ref, recv, array);
 	}
 	  
 	delete [] args;
