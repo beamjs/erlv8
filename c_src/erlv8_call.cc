@@ -1,5 +1,7 @@
 #include "erlv8.hh"
 
+void ErlangFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8::Object> recv, v8::Handle<v8::Array> array); // fwd
+
 TickHandler(CallTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
   ERL_NIF_TERM call_ref = enif_make_copy(ref_env, vm->tick_ref);
@@ -24,28 +26,72 @@ TickHandler(CallTickHandler) {
 	} else {
 	  recv = fun_res->ctx->Global();
 	}
-	v8::TryCatch try_catch;
-	v8::Local<v8::Value> call_result = v8::Handle<v8::Function>::Cast(fun_res->val)->Call(recv, alen, args);
-	if (call_result.IsEmpty()) {
-	  SEND(vm->server,
-		   enif_make_tuple3(env,
-							enif_make_atom(env,"result"),
-							enif_make_copy(env,call_ref),
-							enif_make_tuple2(env,
-											 enif_make_atom(env,"throw"),
-											 enif_make_tuple2(env,
-															  enif_make_atom(env,"error"),
-															  js_to_term(env,try_catch.Exception())))));
-	} else {
-	  SEND(vm->server,
-		   enif_make_tuple3(env,
-							enif_make_atom(env,"result"),
-							enif_make_copy(env,call_ref),
-							js_to_term(env,call_result)));
+	v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(fun_res->val);
+
+	if ((f->Get((v8::String::New("isNative")))->IsUndefined())) { // js function
+	  v8::TryCatch try_catch;
+	  v8::Local<v8::Value> call_result = f->Call(recv, alen, args);
+	  if (call_result.IsEmpty()) {
+		SEND(vm->server,
+			 enif_make_tuple3(env,
+							  enif_make_atom(env,"result"),
+							  enif_make_copy(env,call_ref),
+							  enif_make_tuple2(env,
+											   enif_make_atom(env,"throw"),
+											   enif_make_tuple2(env,
+																enif_make_atom(env,"error"),
+																js_to_term(env,try_catch.Exception())))));
+	  } else {
+		SEND(vm->server,
+			 enif_make_tuple3(env,
+							  enif_make_atom(env,"result"),
+							  enif_make_copy(env,call_ref),
+							  js_to_term(env,call_result)));
+	  }
+	} else { // native Erlang function
+	  v8::Local<v8::Array> array = v8::Array::New(alen);
+
+	  for (unsigned int i=0;i<alen;i++) {
+		array->Set(i,args[i]);
+	  }
+
+	  ErlangFun(vm, external_to_term(f->Get((v8::String::New("isNative")))), call_ref, recv, array);
 	}
+	  
 	delete [] args;
 	args = NULL;
   }
   enif_free_env(ref_env);
   return DONE;		
 }
+
+void ErlangFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8::Object> recv, v8::Handle<v8::Array> array) {
+  v8::HandleScope handle_scope;
+ 
+  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
+  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+
+  // prepare arguments
+  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
+  for (unsigned int i=0;i<array->Length();i++) {
+	arr[i] = js_to_term(vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
+  }
+  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,array->Length());
+  free(arr);
+  // send invocation request
+  SEND(vm->server,
+	   enif_make_tuple3(env,
+						enif_make_copy(env,term),
+						enif_make_tuple7(env, 
+										 enif_make_atom(env,"erlv8_fun_invocation"),
+										 enif_make_atom(env, "false"),
+										 js_to_term(env, recv), // FIXME: not quite sure it's right
+										 js_to_term(env, recv),
+										 enif_make_copy(env, ref),
+										 enif_make_pid(env, vm->server),
+										 enif_make_resource(env, ptr)
+										 ),
+						enif_make_copy(env,arglist)));
+  enif_release_resource(ptr);
+};
+

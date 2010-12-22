@@ -115,4 +115,5 @@ public:
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term);
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val);
-
+ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val);
+v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term);
