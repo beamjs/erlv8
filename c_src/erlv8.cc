@@ -49,6 +49,32 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
   return 1;
 }
 
+v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM term) {
+  if (enif_is_atom(env, term)) {
+	  v8::PropertyAttribute property_attribute;
+	  unsigned len;
+	  enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);
+	  char * name = (char *) malloc(len + 1);
+	  enif_get_atom(env,term,name,len + 1, ERL_NIF_LATIN1);
+	  if (!strcmp(name,"none")) {
+		property_attribute = v8::None;
+	  } else if (!strcmp(name,"readonly")) {
+		property_attribute = v8::ReadOnly;
+	  } else if (!strcmp(name,"dontenum")) {
+		property_attribute = v8::DontEnum;
+	  } else if (!strcmp(name,"dontdelete")) {
+		property_attribute = v8::DontDelete;
+	  }
+	  free(name);
+	  return property_attribute;
+  } else {
+	return v8::None;
+  }
+}
+	
+
+
+
 VM::VM() {
   ticked = 0;
   env = enif_alloc_env();
@@ -410,7 +436,33 @@ static ERL_NIF_TERM object_set_accessor(ErlNifEnv *env, int argc, const ERL_NIF_
 		data->SetHiddenValue(v8::String::New("_setter"), term_to_external(argv[3]));
 	  }
 
-	  return enif_make_atom(env, res->val->ToObject()->SetAccessor(name->ToString(), getter, setter, data) ? "true" : "false");
+	  v8::AccessControl access_control = v8::DEFAULT;
+   
+	  if (argc > 4 && enif_is_atom(env, argv[4])) {
+		unsigned len;
+		enif_get_atom_length(env, argv[4], &len, ERL_NIF_LATIN1);
+		char * name = (char *) malloc(len + 1);
+		enif_get_atom(env,argv[4],name,len + 1, ERL_NIF_LATIN1);
+		if (!strcmp(name,"default")) {
+		  access_control = v8::DEFAULT;
+		} else if (!strcmp(name,"all_can_read")) {
+		  access_control = v8::ALL_CAN_READ;
+		} else if (!strcmp(name,"all_can_write")) {
+		  access_control = v8::ALL_CAN_WRITE;
+		} else if (!strcmp(name,"prohibits_overwriting")) {
+		  access_control = v8::PROHIBITS_OVERWRITING;
+		}
+		free(name);
+	  }
+
+	  v8::PropertyAttribute property_attribute = v8::None;
+   
+	  if (argc > 5) {
+		property_attribute = term_to_property_attribute(env,argv[5]);
+	  }
+
+	  return enif_make_atom(env, res->val->ToObject()->SetAccessor(name->ToString(), getter, setter, data,
+																   access_control, property_attribute) ? "true" : "false");
 	} else {
 	  return enif_make_badarg(env);
 	}

@@ -1,6 +1,7 @@
 -module(erlv8_object,[Resource,VM]).
 -export([proplist/0, set_value/2, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, 
-		 set_prototype/1, get_prototype/0, delete/1, set_accessor/2, set_accessor/3, equals/1, strict_equals/1, call/1, call/2,new/1]).
+		 set_prototype/1, get_prototype/0, delete/1, set_accessor/2, set_accessor/3, set_accessor/4, set_accessor/5,
+		 equals/1, strict_equals/1, call/1, call/2,new/1]).
 
 proplist() ->
 	erlv8_nif:to_proplist(Resource).
@@ -47,6 +48,12 @@ set_accessor(Property, Getter) ->
 
 set_accessor(Property, Getter, Setter) ->
 	erlv8_nif:object_set_accessor(Resource, Property, Getter, Setter).
+
+set_accessor(Property, Getter, Setter, AccessControl) ->
+	erlv8_nif:object_set_accessor(Resource, Property, Getter, Setter, AccessControl).
+
+set_accessor(Property, Getter, Setter, AccessControl, PropertyAttribute) ->
+	erlv8_nif:object_set_accessor(Resource, Property, Getter, Setter, AccessControl, PropertyAttribute).
 
 
 equals({_Tag,AnotherObject,_}) ->

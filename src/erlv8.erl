@@ -490,8 +490,10 @@ setter_test() ->
 											   end,
 							   fun (#erlv8_fun_invocation{ this = This } = _Invocation, [_Prop, Val]) ->
 									   This:set_value("val",Val)
-							   end),
+							   end, default, dontdelete),
 	Global:set_value("setter_value", 1),
+	?assertEqual(1,Global:get_value("setter_value")),
+	Global:delete("setter_value"),
 	?assertEqual(1,Global:get_value("setter_value")),
 	stop().
 
