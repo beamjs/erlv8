@@ -531,4 +531,14 @@ ctx_fun_invocation_test() ->
 	?assertEqual(undefined,Global:get_value("x")),
 	stop().
 
+fun_call_exception_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	erlv8_vm:run(VM,"f = function () { throw('exc'); }"),
+	F = Global:get_value("f"),
+	?assertEqual({throw, {error, "exc"}}, F:call()),
+	stop().
+
+
 -endif.
