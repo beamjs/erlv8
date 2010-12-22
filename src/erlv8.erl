@@ -630,6 +630,14 @@ instantiate_erl_from_js_test() ->
 	Global:set_value("f",fun (#erlv8_fun_invocation{ this = This },[Y]) ->  This:set_value("x",Y) end),
 	?assertEqual({ok, 1}, erlv8_vm:run(VM,"new f(1).x")),
 	stop().
-	
+
+throwing_object_as_an_error_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("f",fun (#erlv8_fun_invocation{},[]) ->  {throw, ?V8Obj([{"a",1}])} end),
+	{exception, E} = erlv8_vm:run(VM,"f()"),
+	?assertEqual(1,E:get_value("a")),
+	stop().
 
 -endif.
