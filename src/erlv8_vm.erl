@@ -179,7 +179,7 @@ handle_info(tick_me, #state{ vm = VM, ticks = Ticks, ticked = Ticked } = State) 
 	end;
 
 %% Invocation
-handle_info({F,#erlv8_fun_invocation{ ref = Ref } = Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
+handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref = Ref } = Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
@@ -215,7 +215,12 @@ handle_info({F,#erlv8_fun_invocation{ ref = Ref } = Invocation,Args}, #state{} =
 					  {'EXIT',{Val, Trace}} ->
 						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
 					  _ ->
-						  next_tick(Self, {result, Ref, Result})
+						  case ICC of 
+							  true ->
+								  next_tick(Self, {result, Ref, This});
+							  false ->
+								  next_tick(Self, {result, Ref, Result})
+						  end
 				  end
 		  end),
 	{noreply, State};

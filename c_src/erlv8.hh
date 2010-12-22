@@ -84,6 +84,7 @@ enum TickHandlerResolution { DONE, RETURN, NEXT };
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);
 TickHandler(CallTickHandler);
+TickHandler(InstantiateTickHandler);
 TickHandler(GetTickHandler);
 TickHandler(SetTickHandler);
 TickHandler(ScriptTickHandler);

@@ -604,6 +604,32 @@ property_attribute_test() ->
 	Global:delete("c"),
 	?assertEqual(1,Global:get_value("c")),
 	stop().
+
+instantiate_js_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	{ok, F} = erlv8_vm:run(VM,"f = function(y) { this.x = y}"),
+	O = F:instantiate([1]),
+	?assertEqual(1,O:get_value("x")),
+	stop().
+
+instantiate_erl_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("f",fun (#erlv8_fun_invocation{ this = This },[Y]) ->  This:set_value("x",Y) end),
+	F = Global:get_value("f"),
+	O = F:instantiate([1]),
+	?assertEqual(1,O:get_value("x")),
+	stop().
+
+instantiate_erl_from_js_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("f",fun (#erlv8_fun_invocation{ this = This },[Y]) ->  This:set_value("x",Y) end),
+	?assertEqual({ok, 1}, erlv8_vm:run(VM,"new f(1).x")),
+	stop().
 	
 
 -endif.

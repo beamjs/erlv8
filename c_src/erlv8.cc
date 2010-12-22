@@ -12,6 +12,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"stop", StopTickHandler},
   {"result", ResultTickHandler},
   {"call", CallTickHandler},
+  {"inst", InstantiateTickHandler},
   {"get", GetTickHandler},
   {"set", SetTickHandler},
   {"script", ScriptTickHandler},
@@ -556,6 +557,11 @@ inline ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val) {
 	return term_ref->term;
 }
 
+v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {
+  v8::HandleScope handle_scope;
+  return v8::Undefined();
+}
+
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
@@ -815,8 +821,12 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
   } else if (enif_is_fun(env, term)) {
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,term_to_external(term));
+    v8::Local<v8::FunctionTemplate> empty_t = v8::FunctionTemplate::New(EmptyFun);
+
 	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
 	f->SetHiddenValue(v8::String::New("__erlv8__"), term_to_external(term));
+	f->SetHiddenValue(v8::String::New("__erlv8__empty__constructor__"), empty_t->GetFunction());
+
 	return f;
   } else if ((enif_is_pid(env, term)) || (enif_is_ref(env,term))) {
 	return term_to_external(term);
