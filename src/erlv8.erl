@@ -390,7 +390,7 @@ hidden_value_test() ->
 	?assertEqual(undefined, Global:get_hidden_value("shouldntbethere")),
 	stop().
 
-equality_test() ->
+objects_equality_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
 	Global = erlv8_vm:global(VM),
@@ -405,6 +405,17 @@ equality_test() ->
 	F2 = Global:get_value("f2"),
 	?assert(F1:equals(F1)),
 	?assert(not F1:strict_equals(F2)),
+	stop().
+
+primitives_equality_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	?assert(erlv8_vm:equals(VM, 1,"1")),
+	?assert(erlv8_vm:equals(VM, 1,1)),
+	?assert(not erlv8_vm:equals(VM, 1,2)),
+	?assert(not erlv8_vm:strict_equals(VM, 1,"1")),
+	?assert(erlv8_vm:strict_equals(VM, 1,1)),
+	?assert(not erlv8_vm:equals(VM, 1,2)),
 	stop().
 
 

@@ -60,10 +60,10 @@ set_accessor(Property, Getter, Setter, AccessControl, PropertyAttribute) ->
 
 
 equals({_Tag,AnotherObject,_}) ->
-	erlv8_value:equals(Resource, AnotherObject).
+	erlv8_value:equals(VM, Resource, AnotherObject).
 
 strict_equals({_Tag,AnotherObject,_}) ->
-	erlv8_value:strict_equals(Resource, AnotherObject).
+	erlv8_value:strict_equals(VM, Resource, AnotherObject).
 
 call(Fun) ->
 	call(Fun,[]).

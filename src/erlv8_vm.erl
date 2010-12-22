@@ -5,7 +5,7 @@
 
 %% API
 -export([start_link/1,start/0,run/2,run/3,run/4,register/2,register/3,global/1,add_handler/3,stop/1,
-		 to_string/2,to_detail_string/2,taint/2,untaint/1,next_tick/2, next_tick/3, next_tick/4,
+		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
 %% gen_server2 callbacks
@@ -92,6 +92,12 @@ handle_call({retr, Key}, _From, #state{ storage = Storage } = State) ->
 
 handle_call({taint, Value}, _From, #state{ vm = VM } = State) ->
 	{reply, erlv8_nif:value_taint(VM,Value), State};
+
+handle_call({equals, V1, V2}, _From, #state{ vm = VM } = State) ->
+	{reply, erlv8_nif:value_equals(VM,V1,V2), State};
+
+handle_call({strict_equals, V1, V2}, _From, #state{ vm = VM } = State) ->
+	{reply, erlv8_nif:value_strict_equals(VM,V1,V2), State};
 
 handle_call(context, _From, #state{} = State) ->
 	{reply, {self(), State#state.context}, State};
@@ -375,6 +381,13 @@ next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
 
 taint(Server, Value) ->
 	gen_server2:call(Server, {taint, Value}).
+
+equals(Server, V1, V2) ->
+	gen_server2:call(Server, {equals, V1, V2}).
+
+strict_equals(Server, V1, V2) ->
+	gen_server2:call(Server, {strict_equals, V1, V2}).
+
 
 stor(Server, Key, Value) ->
 	gen_server2:call(Server, {stor, Key, Value}).

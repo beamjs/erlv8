@@ -485,25 +485,35 @@ static ERL_NIF_TERM object_set_accessor(ErlNifEnv *env, int argc, const ERL_NIF_
 static ERL_NIF_TERM value_equals(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res1; 
   val_res_t *res2; 
-  if ((enif_get_resource(env,argv[0],val_resource,(void **)(&res1))) &&
-	  (enif_get_resource(env,argv[1],val_resource,(void **)(&res2)))) {
+  if ((enif_get_resource(env,argv[1],val_resource,(void **)(&res1))) &&
+	  (enif_get_resource(env,argv[2],val_resource,(void **)(&res2)))) {
 	LHCS(res1->ctx);
 	return enif_make_atom(env, res1->val->ToObject()->Equals(res2->val->ToObject()) ? "true" : "false");
   } else {
-	return enif_make_badarg(env);
+	vm_res_t *res;
+	if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
+	  LHCS(res->vm->context);
+	  return enif_make_atom(env, term_to_js(env,argv[1])->Equals(term_to_js(env,argv[2])) ? "true" : "false");
+	}
   };
+  return enif_make_badarg(env);
 };
 
 static ERL_NIF_TERM value_strict_equals(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res1; 
   val_res_t *res2; 
-  if ((enif_get_resource(env,argv[0],val_resource,(void **)(&res1))) &&
-	  (enif_get_resource(env,argv[1],val_resource,(void **)(&res2)))) {
+  if ((enif_get_resource(env,argv[1],val_resource,(void **)(&res1))) &&
+	  (enif_get_resource(env,argv[2],val_resource,(void **)(&res2)))) {
 	LHCS(res1->ctx);
 	return enif_make_atom(env, res1->val->ToObject()->StrictEquals(res2->val->ToObject()) ? "true" : "false");
   } else {
-	return enif_make_badarg(env);
+	vm_res_t *res;
+	if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
+	  LHCS(res->vm->context);
+	  return enif_make_atom(env, term_to_js(env,argv[1])->StrictEquals(term_to_js(env,argv[2])) ? "true" : "false");
+	}
   };
+  return enif_make_badarg(env);
 };
 
 static ErlNifFunc nif_funcs[] =
@@ -528,8 +538,8 @@ static ErlNifFunc nif_funcs[] =
   {"object_set_accessor", 5, object_set_accessor},
   {"object_set_accessor", 6, object_set_accessor},
   {"object_set_accessor", 7, object_set_accessor},
-  {"value_equals",2, value_equals},
-  {"value_strict_equals",2, value_strict_equals},
+  {"value_equals",3, value_equals},
+  {"value_strict_equals",3, value_strict_equals},
   {"value_taint",2, value_taint}
 };
 
