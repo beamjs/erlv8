@@ -1,5 +1,5 @@
 -module(erlv8_object,[Resource,VM]).
--export([proplist/0, set_value/2, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, 
+-export([proplist/0, set_value/2, set_value/3, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, 
 		 set_prototype/1, get_prototype/0, delete/1, set_accessor/2, set_accessor/3, set_accessor/4, set_accessor/5,
 		 equals/1, strict_equals/1, call/1, call/2,new/1]).
 
@@ -8,6 +8,9 @@ proplist() ->
 
 set_value(Key,Value) ->
 	erlv8_vm:next_tick(VM, {set, Resource, Key, Value}).
+
+set_value(Key,Value,PropertyAttribute) ->
+	erlv8_vm:next_tick(VM, {set, Resource, Key, Value, PropertyAttribute}).
 
 set_hidden_value(Key,Value) ->
 	erlv8_nif:object_set_hidden(Resource, Key, Value).

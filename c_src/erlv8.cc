@@ -67,6 +67,15 @@ v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM t
 	  }
 	  free(name);
 	  return property_attribute;
+  } else if (enif_is_list(env, term)) {
+	ERL_NIF_TERM current = term;
+	ERL_NIF_TERM head, tail;
+	v8::PropertyAttribute property_attribute = v8::None;
+	while (enif_get_list_cell(env, current, &head, &tail)) {
+	  property_attribute = (v8::PropertyAttribute) (property_attribute | term_to_property_attribute(env,head));
+	  current = tail;
+	}
+	return property_attribute;
   } else {
 	return v8::None;
   }

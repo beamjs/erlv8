@@ -584,6 +584,21 @@ parallel_call_test_loop(T,L) ->
 			error({bad_result, Other})
 	end.
 
+property_attribute_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("a",1,dontdelete),
+	Global:set_value("b",1,readonly),
+	Global:set_value("c",1,[dontdelete,readonly]),
+	Global:delete("a"),
+	Global:set_value("b",2),
+	?assertEqual(1,Global:get_value("a")),
+	?assertEqual(1,Global:get_value("b")),
+	?assertEqual(1,Global:get_value("c")),
+	Global:delete("c"),
+	?assertEqual(1,Global:get_value("c")),
+	stop().
 	
 
 -endif.
