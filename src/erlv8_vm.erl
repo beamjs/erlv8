@@ -119,7 +119,7 @@ handle_call({next_tick, Tick}, From, State) ->
 
 handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked = Ticked, flush_tick = true } = State) ->
 	tack = erlv8_nif:tick(VM, Ref, Tick),
-	{noreply, State#state{ ticks = Ticks, ticked = [{Ref,{From,Tick}}|Ticked], flush_tick = false }};
+	{noreply, State#state{ ticks = Ticks, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }};
 
 handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
 	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
@@ -175,7 +175,7 @@ handle_info(tick_me, #state{ vm = VM, ticks = Ticks, ticked = Ticked } = State) 
 			{noreply, State#state{ ticks = Ticks1, flush_tick = true }};
 		{{value, {Ref, {From,Tick}}}, Ticks1} ->
 			tack = erlv8_nif:tick(VM, Ref, Tick),
-			{noreply, State#state{ ticks = Ticks1, ticked = [{Ref,{From, Tick}}|Ticked], flush_tick = false }}
+			{noreply, State#state{ ticks = Ticks1, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }}
 	end;
 
 %% Invocation
@@ -307,6 +307,11 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+update_ticked(_Ref, From, {result, _, _}, Ticked) -> %% do not insert results, nobody is going to reply on them
+	gen_server2:reply(From, ok),
+	Ticked;
+update_ticked(Ref, From, Tick, Ticked) ->
+	[{Ref,{From,Tick}}|Ticked].
 
 %%%===================================================================
 %%% Public functions
