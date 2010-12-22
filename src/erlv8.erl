@@ -11,6 +11,11 @@ stop() ->
 %% TESTS
 -include_lib("eunit/include/eunit.hrl").%
 -ifdef(TEST).
+
+suppress_kernel_logger_test() ->
+	% not a test, obviously
+	error_logger:delete_report_handler(error_logger_tty_h).
+
 valid_vm_creation_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
