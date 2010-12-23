@@ -669,4 +669,16 @@ throwing_object_as_an_error_test() ->
 	?assertEqual(1,E:get_value("a")),
 	stop().
 
+v8_return_value_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("f",fun (#erlv8_fun_invocation{},[X]) -> X end),
+	F = Global:get_value("f"),
+	O = erlv8_vm:taint(VM, ?V8Obj([{"a",1}])),
+	O1 = F:call([O]),
+	?assert(O:equals(O1)),
+	stop().
+	
+
 -endif.
