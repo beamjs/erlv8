@@ -899,8 +899,10 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   v8::HandleScope handle_scope;
 
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-
-  v8::Locker::StartPreemption(100);
+  
+  int preemption = 100; // default value
+  enif_get_int(env, load_info, &preemption);
+  v8::Locker::StartPreemption(preemption);
 
   return 0;
 };

@@ -6,18 +6,27 @@
 		 object_set_accessor/3, object_set_accessor/4, object_set_accessor/5, object_set_accessor/6, object_set_accessor/7,
 		 value_equals/3, value_strict_equals/3, value_taint/2]).
 
+-define(DEFAULT_PREEMPTION, 100).
+
 init() ->
+	Preemption = 
+		case application:get_env(erlv8, preemption_ms) of
+			{ok, V} ->
+				V;
+			_ ->
+				?DEFAULT_PREEMPTION
+		end,
 	case os:getenv("ERLV8_SO_PATH") of
 		false ->
 			case code:which(erlv8_nif) of
 				Filename when is_list(Filename) ->
-					erlang:load_nif(filename:join([filename:dirname(Filename),"../priv/erlv8_drv"]), 0);
+					erlang:load_nif(filename:join([filename:dirname(Filename),"../priv/erlv8_drv"]), Preemption);
 				Err ->
 					Err
 			end;
 		Path ->
 			Filename = filename:join([Path,"erlv8_drv"]),
-			erlang:load_nif(Filename,0)
+			erlang:load_nif(Filename,Preemption)
 	end.
 
 
