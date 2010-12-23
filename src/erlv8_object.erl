@@ -4,7 +4,7 @@
 		 equals/1, strict_equals/1, call/1, call/2,new/1]).
 
 proplist() ->
-	erlv8_nif:to_proplist(Resource).
+	erlv8_vm:next_tick(VM,{proplist, Resource}).
 
 set_value(Key,Value) ->
 	erlv8_vm:next_tick(VM, {set, Resource, Key, Value}).

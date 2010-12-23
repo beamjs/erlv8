@@ -15,6 +15,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"inst", InstantiateTickHandler},
   {"get", GetTickHandler},
   {"set", SetTickHandler},
+  {"proplist", ProplistTickHandler},
   {"script", ScriptTickHandler},
   {NULL, UnknownTickHandler} 
 };
@@ -311,29 +312,6 @@ static ERL_NIF_TERM value_taint(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
-static ERL_NIF_TERM to_proplist(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-
-	v8::Handle<v8::Array> keys = res->val->ToObject()->GetPropertyNames();
-	
-	ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
-	
-	for (unsigned int i=0;i<keys->Length();i++) {
-	  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
-	  arr[i] = enif_make_tuple2(env,
-								js_to_term(env,v8::Handle<v8::String>::Cast(key)),
-								js_to_term(env,res->val->ToObject()->Get(key)));
-	}
-	ERL_NIF_TERM list = enif_make_list_from_array(env,arr,keys->Length());
-	free(arr);
-	return list;
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
 static ERL_NIF_TERM to_list(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
   if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
@@ -525,7 +503,6 @@ static ErlNifFunc nif_funcs[] =
   {"global",1, global},
   {"to_string",2, to_string},
   {"to_detail_string",2, to_detail_string},
-  {"to_proplist",1, to_proplist},
   {"to_list",1, to_list},
   {"tick",3, tick},
   {"object_set_hidden",3, object_set_hidden},
