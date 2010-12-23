@@ -34,7 +34,7 @@ few_vms_test() ->
 compilation_error_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	?assertMatch({compilation_failed, _}, erlv8_vm:run(VM,"1+;")),
+	?assertMatch({throw, _}, erlv8_vm:run(VM,"1+;")),
 	stop().
 
 vm_stopping_test() ->
@@ -194,10 +194,10 @@ term_to_js_error_test() ->
 	{ok, VM} = erlv8_vm:start(),
 	Global = erlv8_vm:global(VM),
 	Global:set_value("x",fun (#erlv8_fun_invocation{},[]) -> {throw, {error, "Hello"}} end),
-	{exception, Exception} = erlv8_vm:run(VM,"x()"),
+	{throw, Exception} = erlv8_vm:run(VM,"x()"),
 	?assertEqual("Hello", Exception:get_value("message")),
 	Global:set_value("x",fun (#erlv8_fun_invocation{},[]) -> {throw, "Goodbye"} end),
-	{exception, "Goodbye"} = erlv8_vm:run(VM,"x()"),
+	{throw, "Goodbye"} = erlv8_vm:run(VM,"x()"),
 	stop().
 
 object_fun_test() ->
@@ -244,14 +244,14 @@ fun_fail_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
 	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
-	?assertMatch({exception, _},erlv8_vm:run(VM,"test();")),
+	?assertMatch({throw, _},erlv8_vm:run(VM,"test();")),
 	stop().
 
 fun_fail_inside_badmatch_test() -> %% TODO: cover all standard exits?
 	start(),
 	{ok, VM} = erlv8_vm:start(),
 	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> ok = Val end, F end),
-	?assertMatch({exception, _}, erlv8_vm:run(VM,"test('help');")),
+	?assertMatch({throw, _}, erlv8_vm:run(VM,"test('help');")),
 	stop().
 	
 
@@ -665,7 +665,7 @@ throwing_object_as_an_error_test() ->
 	{ok, VM} = erlv8_vm:start(),
 	Global = erlv8_vm:global(VM),
 	Global:set_value("f",fun (#erlv8_fun_invocation{},[]) ->  {throw, ?V8Obj([{"a",1}])} end),
-	{exception, E} = erlv8_vm:run(VM,"f()"),
+	{throw, E} = erlv8_vm:run(VM,"f()"),
 	?assertEqual(1,E:get_value("a")),
 	stop().
 

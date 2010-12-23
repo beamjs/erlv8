@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,start/0,run/2,run/3,run/4,register/2,register/3,global/1,add_handler/3,stop/1,
+-export([start_link/1,start/0,run/2,run/3,run/4,register/2,register/3,global/1,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
@@ -21,7 +21,6 @@
 		  ticks,
 		  ticked = [],
 		  flush_tick = false,
-		  event_mgr,
 		  storage = [],
 		  context
 		 }).
@@ -61,10 +60,9 @@ start_link(VM) ->
 %%--------------------------------------------------------------------
 init([VM]) ->
 	process_flag(trap_exit, true),
-	{ok, EventPid} = gen_event:start_link(),
 	erlv8_nif:set_server(VM, self()),
 	Ctx = erlv8_nif:context(VM),
-	{ok, #state{vm = VM, ticks = queue:new(), event_mgr = EventPid, context = Ctx}}.
+	{ok, #state{vm = VM, ticks = queue:new(), context = Ctx}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -80,10 +78,6 @@ init([VM]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_call({add_handler, Handler, Args}, _From, #state{ event_mgr = EventMgr } = State) ->
-	Result = gen_event:add_handler(EventMgr,Handler,Args),
-	{reply, Result, State};
-
 handle_call({stor, Key, Value}, _From, #state{ storage = Storage } = State) ->
 	{reply, ok, State#state{ storage = [{Key, Value}|Storage] }};
 
@@ -129,13 +123,6 @@ handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked
 
 handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
 	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
-
-handle_call({script, _CtxRes, _Source, _, _, _}=Tick, From, #state{ requests = Requests } = State) ->
-	Ref = make_ref(),
-	Self = self(),
-	spawn(fun () -> next_tick(Self,Tick, Ref) end),
-	{noreply, State#state{ requests = [{Ref, From}|Requests] }};
-
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
@@ -238,44 +225,6 @@ handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
 			gen_server2:reply(From, Result),
 			{noreply, State#state{ ticked = proplists:delete(Ref, Ticked) } }
 	end;
-handle_info({compilation_failed, Ref, Error}=Evt, #state{ event_mgr = EventMgr, requests = Requests  } = State) ->
-	State1 =
-	case proplists:get_value(Ref,Requests) of
-		undefined ->
-			error_logger:warning_msg("Ref ~p not found in Requests. This shouldn't normally happen~n",[Ref]),
-			State;
-		From ->
-			gen_server2:reply(From, {compilation_failed, Error}),
-			State#state{ requests = proplists:delete(Ref, Requests) }
-	end,
-	gen_event:notify(EventMgr, Evt),
-	{noreply, State1};
-handle_info({starting, _Ref}, State) ->
-	{noreply, State};
-handle_info({exception, Ref, Exception}=Evt, #state{ event_mgr = EventMgr, requests = Requests } = State) ->
-	State1 =
-	case proplists:get_value(Ref,Requests) of
-		undefined ->
-			error_logger:warning_msg("Ref ~p not found in Requests. This shouldn't normally happen~n",[Ref]),
-			State;
-		From ->
-			gen_server2:reply(From, {exception, Exception}),
-			State#state{ requests = proplists:delete(Ref, Requests) }
-	end,
-	gen_event:notify(EventMgr,Evt),
-	{noreply, State1};
-handle_info({finished, Ref, Result}=Evt, #state{ event_mgr = EventMgr, requests = Requests } = State) ->
-	State1 =
-	case proplists:get_value(Ref,Requests) of
-		undefined ->
-			error_logger:warning_msg("Ref ~p not found in Requests. This shouldn't normally happen~n",[Ref]),
-			State;
-		From ->
-			gen_server2:reply(From, {ok, Result}),
-			State#state{ requests = proplists:delete(Ref, Requests) }
-	end,
-	gen_event:notify(EventMgr,Evt),
-	{noreply, State1};
 
 handle_info(_Info, State) ->
 	{noreply, State}.
@@ -299,9 +248,8 @@ prioritise_info(_,_State) ->
 %% @spec terminate(Reason, State) -> void()
 %% @end
 %%--------------------------------------------------------------------
-terminate(_Reason, #state{ vm = VM, event_mgr = EventMgr } = _State) ->
+terminate(_Reason, #state{ vm = VM } = _State) ->
 	tack = erlv8_nif:tick(VM,make_ref(),{stop}),
-	gen_event:stop(EventMgr),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -331,9 +279,6 @@ start() ->
 	VM = erlv8_nif:new_vm(),
 	supervisor2:start_child(erlv8_sup,[VM]).
 
-add_handler(Server, Handler, Args) ->
-	gen_server2:call(Server, {add_handler, Handler, Args}).
-
 register(Server, Mod) when is_atom(Mod) ->
 	register(Server, Mod, Mod).
 
@@ -352,7 +297,7 @@ run(Server, {_, _CtxRes} = Context, Source) ->
 	run(Server, Context, Source, {"unknown",0,0}).
 
 run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
-	gen_server2:call(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}, infinity).
+	next_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
 
 global(Server) ->
 	Ctx = erlv8_context:get(Server),

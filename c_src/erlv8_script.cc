@@ -25,26 +25,27 @@ TickHandler(ScriptTickHandler) {
 	delete origin;
 	
 	if (compiled.IsEmpty()) {
-	  SEND(vm->server,
-		   (enif_make_tuple3(env,
-							 enif_make_atom(env,"compilation_failed"),
-						   enif_make_copy(env, script_ref),
-							 js_to_term(env,try_catch.Exception()))));
+	  SEND(vm->server,enif_make_tuple3(env,
+									   enif_make_atom(env,"result"),
+									   enif_make_copy(env, script_ref),
+									   enif_make_tuple2(env,
+														enif_make_atom(env,"throw"),
+														js_to_term(env,try_catch.Exception()))));
 	} else {
-	  SEND(vm->server, enif_make_tuple2(env,
-										enif_make_atom(env,"starting"),
-										enif_make_copy(env, script_ref)));
 	  v8::Handle<v8::Value> value = compiled->Run();
 	  if (value.IsEmpty()) {
 		SEND(vm->server,enif_make_tuple3(env,
-										 enif_make_atom(env,"exception"),
+										 enif_make_atom(env,"result"),
 										 enif_make_copy(env, script_ref),
-										 js_to_term(env,try_catch.Exception())));
+										 enif_make_tuple2(env,
+														  enif_make_atom(env,"throw"),
+														  js_to_term(env,try_catch.Exception()))));
 	  } else {
 		SEND(vm->server,enif_make_tuple3(env,
-										 enif_make_atom(env,"finished"),
+										 enif_make_atom(env,"result"),
 										 enif_make_copy(env, script_ref),
-										 js_to_term(env,value)));
+										 enif_make_tuple2(env, enif_make_atom(env,"ok"),
+														  js_to_term(env,value))));
 	  }
 	}
   }
