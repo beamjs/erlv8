@@ -231,6 +231,15 @@ fun_test() ->
 	?assertEqual({ok, 321}, erlv8_vm:run(VM,"f = function(x) { return test(x) }; test0(f);")),
 	stop().
 
+erlang_fun_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
+	Global = erlv8_vm:global(VM),
+	T = Global:get_value("test"),
+	?assertEqual(321, T:call([321])),
+	stop().
+
 fun_fail_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
