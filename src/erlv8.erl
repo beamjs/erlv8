@@ -434,6 +434,15 @@ taint_test() ->
 	?assertMatch(#erlv8_object{},erlv8_vm:taint(VM, ?V8Obj([{"a",1}]))),
 	stop().
 
+implicit_taint_for_erlang_only_calls_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("x",fun (#erlv8_fun_invocation{},[#erlv8_object{vm = VM1}]) -> VM1 =/= undefined  end),
+	X = Global:get_value("x"),
+	?assert(X:call([?V8Obj([])])),
+	stop().
+
 fun_extends_object_test() ->	
 	start(),
 	{ok, VM} = erlv8_vm:start(),
