@@ -16,7 +16,6 @@
 
 -record(state, {
 		  vm,
-		  requests = [],
 		  mods = [],
 		  ticks,
 		  ticked = [],
