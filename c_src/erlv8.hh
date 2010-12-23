@@ -88,6 +88,7 @@ TickHandler(InstantiateTickHandler);
 TickHandler(GetTickHandler);
 TickHandler(SetTickHandler);
 TickHandler(ProplistTickHandler);
+TickHandler(ListTickHandler);
 TickHandler(ScriptTickHandler);
 TickHandler(UnknownTickHandler);
 

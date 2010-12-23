@@ -16,6 +16,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"get", GetTickHandler},
   {"set", SetTickHandler},
   {"proplist", ProplistTickHandler},
+  {"list", ListTickHandler},
   {"script", ScriptTickHandler},
   {NULL, UnknownTickHandler} 
 };
@@ -312,25 +313,6 @@ static ERL_NIF_TERM value_taint(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
-static ERL_NIF_TERM to_list(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	if (res->val->IsArray()) {
-	  v8::Handle<v8::Array> array = v8::Handle<v8::Array>::Cast(res->val->ToObject());
-	  
-	  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
-	  for (unsigned int i=0;i<array->Length();i++) {
-		arr[i] = js_to_term(env,array->Get(v8::Integer::NewFromUnsigned(i)));
-	  }
-	  ERL_NIF_TERM list = enif_make_list_from_array(env,arr,array->Length());
-	  free(arr);
-	  return list;
-	}
-  }
-  return enif_make_badarg(env);
-};
-
 static ERL_NIF_TERM object_set_hidden(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
   if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
@@ -503,7 +485,6 @@ static ErlNifFunc nif_funcs[] =
   {"global",1, global},
   {"to_string",2, to_string},
   {"to_detail_string",2, to_detail_string},
-  {"to_list",1, to_list},
   {"tick",3, tick},
   {"object_set_hidden",3, object_set_hidden},
   {"object_get_hidden",2, object_get_hidden},
