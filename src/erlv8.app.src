@@ -1,7 +1,7 @@
 {application, erlv8,
  [
   {description, "Erlang V8 interface"},
-  {vsn, "0.1"},
+  {vsn, "0.1-%sha%"},
   {registered, []},
   {modules, [erlv8, erlv8_app, erlv8_fun, erlv8_object, erlv8_context, erlv8_array, erlv8_module, erlv8_fun_invocation, erlv8_vm, erlv8_nif, erlv8_sup]},
   {applications, [

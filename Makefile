@@ -31,3 +31,4 @@ test: compile
 
 compile: dependencies
 	@./rebar compile
+	@cat ebin/erlv8.app | sed s/%sha%/`git log -1 --pretty=format:%h`/ > ebin/erlv8.app
