@@ -169,10 +169,7 @@ static ERL_NIF_TERM to_string(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[
   vm_res_t *res;
   if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
 	{
-	  v8::Locker locker;
-	  v8::HandleScope handle_scope;
-	  v8::Context::Scope context_scope(res->vm->context);
-	  
+	  LHCS(res->vm->context);
 	  return js_to_term(env,term_to_js(env,argv[1])->ToString());
 	}
   } else {
