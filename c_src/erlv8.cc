@@ -25,8 +25,10 @@ static ErlV8TickHandler tick_handlers[] =
 VM::VM() {
   ticked = 0;
   env = enif_alloc_env();
-  tick_cond = enif_cond_create(NULL);
-  tick_cond_mtx = enif_mutex_create(NULL);
+  pthread_condattr_init(&tick_cond_attr);
+  pthread_cond_init(&tick_cond, &tick_cond_attr);
+  pthread_mutexattr_init(&tick_cond_mtx_attr);
+  pthread_mutex_init(&tick_cond_mtx, &tick_cond_mtx_attr);
   v8::Locker locker;
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
@@ -37,11 +39,10 @@ VM::VM() {
 VM::~VM() { 
 	context.Dispose();
 	enif_free_env(env);
-	enif_cond_destroy(tick_cond);
-#ifdef __APPLE__
-	enif_mutex_unlock(tick_cond_mtx);
-#endif
-	enif_mutex_destroy(tick_cond_mtx);
+	pthread_condattr_destroy(&tick_cond_attr);
+	pthread_cond_destroy(&tick_cond);
+	pthread_mutexattr_destroy(&tick_cond_mtx_attr);
+	pthread_mutex_destroy(&tick_cond_mtx);
 };
 
 void VM::requestTick() {
@@ -49,11 +50,11 @@ void VM::requestTick() {
 };
 
 void VM::waitForTick() {
-  enif_mutex_lock(tick_cond_mtx);
-  while (!ticked) { // according to erl_nif/driver documentation, enif_cond_wait might return before the cond was broadcasted
-	enif_cond_wait(tick_cond,tick_cond_mtx);
+  pthread_mutex_lock(&tick_cond_mtx);
+  while (!ticked) { 
+	pthread_cond_wait(&tick_cond, &tick_cond_mtx);
   }
-  enif_mutex_unlock(tick_cond_mtx);
+  pthread_mutex_unlock(&tick_cond_mtx);
   ticked = 0;
 };
 
@@ -196,7 +197,7 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 	res->vm->tick = enif_make_copy(res->vm->env, argv[2]);
 	res->vm->tick_ref = enif_make_copy(res->vm->env, argv[1]);
 	res->vm->ticked = 1;
-	enif_cond_broadcast(res->vm->tick_cond);
+	pthread_cond_broadcast(&res->vm->tick_cond);
 	return enif_make_atom(env,"tack");
   } else {
 	return enif_make_badarg(env);

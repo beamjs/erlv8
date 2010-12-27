@@ -2,6 +2,8 @@
 
 #include "erl_nif.h"
 
+#include <pthread.h>
+
 #include <iostream>
 #include <cstring>
 #include <cmath>
@@ -64,8 +66,10 @@ public:
   int ticked;
   ERL_NIF_TERM tick;
   ERL_NIF_TERM tick_ref;
-  ErlNifCond *tick_cond;
-  ErlNifMutex *tick_cond_mtx;
+  pthread_condattr_t tick_cond_attr;
+  pthread_cond_t tick_cond;
+  pthread_mutexattr_t tick_cond_mtx_attr;
+  pthread_mutex_t tick_cond_mtx;
 
   ErlNifTid tid;
   
