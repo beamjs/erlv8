@@ -177,41 +177,41 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
 				  case Result of 
 					  {'EXIT',{badarg, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad argument(s)")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("Bad argument(s)")}}});
 					  {'EXIT',{function_clause, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("No matching function implementation")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("No matching function implementation")}}});
 					  {'EXIT',{{badmatch, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, ?ErrorVal("Bad match")}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, ?ErrorVal("Bad match")}});
 					  {'EXIT',{badarith,Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad arithmetic operation")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("Bad arithmetic operation")}}});
 					  {'EXIT',{{case_clause, Val},Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No case clause matched")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?ErrorVal("No case clause matched")}}});
 					  {'EXIT',{if_clause, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad formed if expression, no true branch found")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("Bad formed if expression, no true branch found")}}});
 					  {'EXIT',{{try_clause, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No matching branch is found when evaluating the of-section of a try expression")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?ErrorVal("No matching branch is found when evaluating the of-section of a try expression")}}});
 					  {'EXIT',{undef, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("The function cannot be found")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("The function cannot be found")}}});
 					  {'EXIT',{{badfun, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Bad function")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?ErrorVal("Bad function")}}});
 					  {'EXIT',{{badarity, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("A fun is applied to the wrong number of arguments")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?ErrorVal("A fun is applied to the wrong number of arguments")}}});
 					  {'EXIT',{timeout_value, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("The timeout value in a receive..after expression is evaluated to something else than an integer or infinity")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("The timeout value in a receive..after expression is evaluated to something else than an integer or infinity")}}});
 					  {'EXIT',{noproc, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Trying to link to a non-existing process")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("Trying to link to a non-existing process")}}});
 					  {'EXIT',{{nocatch, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Trying to evaluate a throw outside a catch")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?ErrorVal("Trying to evaluate a throw outside a catch")}}});
 					  {'EXIT',{system_limit, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("A system limit has been reached")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?Error("A system limit has been reached")}}});
 					  {'EXIT',{Val, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
+						  next_tick(Self, {?ResultTick, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
 					  _ ->
 						  case ICC of 
 							  true ->
-								  next_tick(Self, {result, Ref, This});
+								  next_tick(Self, {?ResultTick, Ref, This});
 							  false ->
-								  next_tick(Self, {result, Ref, Result})
+								  next_tick(Self, {?ResultTick, Ref, Result})
 						  end
 				  end
 		  end),
@@ -248,7 +248,7 @@ prioritise_info(_,_State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, #state{ vm = VM } = _State) ->
-	tack = erlv8_nif:tick(VM,make_ref(),{stop}),
+	tack = erlv8_nif:tick(VM,make_ref(),{?StopTick}),
 	ok.
 
 %%--------------------------------------------------------------------
@@ -296,7 +296,7 @@ run(Server, {_, _CtxRes} = Context, Source) ->
 	run(Server, Context, Source, {"unknown",0,0}).
 
 run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
-	next_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
+	next_tick(Server, {?ScriptTick, CtxRes, Source, Name, LineOffset, ColumnOffset}).
 
 global(Server) ->
 	Ctx = erlv8_context:get(Server),
