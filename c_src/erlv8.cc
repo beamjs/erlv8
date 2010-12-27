@@ -25,8 +25,8 @@ static ErlV8TickHandler tick_handlers[] =
 VM::VM() {
   ticked = 0;
   env = enif_alloc_env();
-  tick_cond = enif_cond_create((char *)"erlv8_tick_condition");
-  tick_cond_mtx = enif_mutex_create((char *)"erlv8_tick_condition_mutex");
+  tick_cond = enif_cond_create(NULL);
+  tick_cond_mtx = enif_mutex_create(NULL);
   v8::Locker locker;
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
