@@ -1,18 +1,24 @@
 #include "erlv8.hh"
 
-typedef TickHandlerResolution (*TickHandler)(VM *, int, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
+typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
 
-static TickHandler tick_handlers[] =
+struct ErlV8TickHandler {
+  const char * name;
+  TickHandler handler;
+};
+
+static ErlV8TickHandler tick_handlers[] =
 {
-  StopTickHandler,
-  ResultTickHandler,
-  CallTickHandler,
-  InstantiateTickHandler,
-  GetTickHandler,
-  SetTickHandler,
-  ProplistTickHandler,
-  ListTickHandler,
-  ScriptTickHandler
+  {"stop", StopTickHandler},
+  {"result", ResultTickHandler},
+  {"call", CallTickHandler},
+  {"inst", InstantiateTickHandler},
+  {"get", GetTickHandler},
+  {"set", SetTickHandler},
+  {"proplist", ProplistTickHandler},
+  {"list", ListTickHandler},
+  {"script", ScriptTickHandler},
+  {NULL, UnknownTickHandler} 
 };
 
 
@@ -65,25 +71,40 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 	waitForTick(); 
 	v8::Locker locker;
 	v8::HandleScope handle_scope;
-	v8::Handle<v8::Value> result;
 	
 	if (enif_is_tuple(env, tick)) { // should be always true, just a sanity check
 	  
 	  ERL_NIF_TERM *array;
-	  int arity; int tick_tag;
+	  int arity;
 	  enif_get_tuple(env,tick,&arity,(const ERL_NIF_TERM **)&array);
-	  enif_get_int(env,array[0],&tick_tag);
-	
-	  switch (tick_handlers[tick_tag](this, tick_tag, ref, arity, array, result)) {
-	  case DONE:
-		break;
-	  case RETURN:
-		return result;
-		break;
-	  case RETICK:
-		RetickTickHandler(this, tick_tag, ref, arity, array, result);
-		break;
+		
+	  unsigned len;
+	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
+	  char * name = (char *) malloc(len + 1);
+	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  
+	  // lookup the matrix
+	  v8::Handle<v8::Value> result;
+	  unsigned int i = 0;
+	  bool stop_flag = false;
+
+	  while (!stop_flag) {
+		if ((!tick_handlers[i].name) ||
+			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
+		  switch (tick_handlers[i].handler(this, name, ref, arity, array, result)) {
+		  case DONE:
+			stop_flag = true;
+			break;
+		  case NEXT:
+			break;
+		  case RETURN:
+			return result;
+			break;
+		  }
+		}
+		i++;
 	  }
+	  free(name);
 	}
   }
 };

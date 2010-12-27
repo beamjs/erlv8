@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-TickHandler(RetickTickHandler) {
+TickHandler(UnknownTickHandler) {
   SEND(vm->server,
 	   enif_make_tuple2(env,
 						enif_make_atom(env,"retick"),

@@ -77,9 +77,9 @@ public:
 
 };
 
-enum TickHandlerResolution { DONE, RETURN, RETICK };
+enum TickHandlerResolution { DONE, RETURN, NEXT };
 
-#define TickHandler(name) TickHandlerResolution name(VM * vm, int tag, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
+#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
 
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);
@@ -90,7 +90,7 @@ TickHandler(SetTickHandler);
 TickHandler(ProplistTickHandler);
 TickHandler(ListTickHandler);
 TickHandler(ScriptTickHandler);
-TickHandler(RetickTickHandler);
+TickHandler(UnknownTickHandler);
 
 class Send {
 public:
