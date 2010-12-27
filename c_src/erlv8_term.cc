@@ -32,12 +32,12 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 }
 
 v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM term) {
+  unsigned len;
+  char name[MAX_ATOM_LEN];
   if (enif_is_atom(env, term)) {
 	  v8::PropertyAttribute property_attribute;
-	  unsigned len;
 	  enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);
-	  char * name = (char *) malloc(len + 1);
-	  enif_get_atom(env,term,name,len + 1, ERL_NIF_LATIN1);
+	  enif_get_atom(env,term, (char *) &name,len + 1, ERL_NIF_LATIN1);
 	  if (!strcmp(name,"none")) {
 		property_attribute = v8::None;
 	  } else if (!strcmp(name,"readonly")) {
@@ -47,7 +47,6 @@ v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM t
 	  } else if (!strcmp(name,"dontdelete")) {
 		property_attribute = v8::DontDelete;
 	  }
-	  free(name);
 	  return property_attribute;
   } else if (enif_is_list(env, term)) {
 	ERL_NIF_TERM current = term;
@@ -87,11 +86,11 @@ inline ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val) {
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
+  unsigned len;
+  char name[MAX_ATOM_LEN];
   if (enif_is_atom(env, term)) {
-	unsigned len;
 	enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);
-	char * name = (char *) malloc(len + 1);
-	enif_get_atom(env,term,name,len + 1, ERL_NIF_LATIN1);
+	enif_get_atom(env, term, (char *) &name,len + 1, ERL_NIF_LATIN1);
 	v8::Handle<v8::Value> result;
 
 	// check for special atoms
@@ -108,7 +107,6 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	} else { // if it is not a special atom, convert it to a string
 	  result = v8::Local<v8::String>::New(v8::String::New(name));
 	}
-	free(name);
 	return result;
   } else if	(enif_get_int(env,term,&_int)) {
 	return v8::Local<v8::Integer>::New(v8::Integer::New(_int));
@@ -139,10 +137,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	int arity;
 	enif_get_tuple(env,term,&arity,(const ERL_NIF_TERM **)&array);
 	if (arity == 3) { 
-	  unsigned len;
 	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
-	  char * name = (char *) malloc(len + 1);
-	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  enif_get_atom(env,array[0], (char *) &name,len + 1, ERL_NIF_LATIN1);
 	  val_res_t *res;
 	  // check if it is a v8_fun
 	  int isv8fun = strcmp(name,"erlv8_fun")==0;
@@ -150,7 +146,6 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  int isobj = strcmp(name,"erlv8_object")==0;
 	  // check if it is an array
 	  int isarray = strcmp(name,"erlv8_array")==0;
-	  free(name);
 
 	  if (isobj||isarray) {
 		val_res_t *res;
@@ -210,10 +205,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
 
 	if (arity == 2) { 
-	  unsigned len;
 	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
-	  char * name = (char *) malloc(len + 1);
-	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  enif_get_atom(env,array[0], (char *) &name,len + 1, ERL_NIF_LATIN1);
 	  // check if it is an error
 	  int iserror = strcmp(name,"error")==0;
 	  int isthrow = strcmp(name,"throw")==0;

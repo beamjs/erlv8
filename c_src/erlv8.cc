@@ -64,7 +64,9 @@ void VM::run() {
 v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
   v8::Locker locker;
   v8::Context::Scope context_scope(context);
-  
+  char name[MAX_ATOM_LEN];
+  unsigned len;
+
   while (1) {
 	v8::Unlocker unlocker;
 	requestTick();
@@ -78,10 +80,8 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 	  int arity;
 	  enif_get_tuple(env,tick,&arity,(const ERL_NIF_TERM **)&array);
 		
-	  unsigned len;
 	  enif_get_atom_length(env, array[0], &len, ERL_NIF_LATIN1);
-	  char * name = (char *) malloc(len + 1);
-	  enif_get_atom(env,array[0],name,len + 1, ERL_NIF_LATIN1);
+	  enif_get_atom(env,array[0],(char *)&name,len + 1, ERL_NIF_LATIN1);
 	  
 	  // lookup the matrix
 	  v8::Handle<v8::Value> result;
@@ -104,7 +104,6 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 		}
 		i++;
 	  }
-	  free(name);
 	}
   }
 };
@@ -314,6 +313,7 @@ void weak_accessor_data_cleaner(v8::Persistent<v8::Value> object, void * data) {
 
 static ERL_NIF_TERM object_set_accessor(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
+  char aname[MAX_ATOM_LEN];
   if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
 	LHCS(res->ctx);
 	if (argc > 2) {
@@ -342,18 +342,16 @@ static ERL_NIF_TERM object_set_accessor(ErlNifEnv *env, int argc, const ERL_NIF_
 	  if (argc > 4 && enif_is_atom(env, argv[4])) {
 		unsigned len;
 		enif_get_atom_length(env, argv[4], &len, ERL_NIF_LATIN1);
-		char * name = (char *) malloc(len + 1);
-		enif_get_atom(env,argv[4],name,len + 1, ERL_NIF_LATIN1);
-		if (!strcmp(name,"default")) {
+		enif_get_atom(env,argv[4], (char *) &aname,len + 1, ERL_NIF_LATIN1);
+		if (!strcmp(aname,"default")) {
 		  access_control = v8::DEFAULT;
-		} else if (!strcmp(name,"all_can_read")) {
+		} else if (!strcmp(aname,"all_can_read")) {
 		  access_control = v8::ALL_CAN_READ;
-		} else if (!strcmp(name,"all_can_write")) {
+		} else if (!strcmp(aname,"all_can_write")) {
 		  access_control = v8::ALL_CAN_WRITE;
-		} else if (!strcmp(name,"prohibits_overwriting")) {
+		} else if (!strcmp(aname,"prohibits_overwriting")) {
 		  access_control = v8::PROHIBITS_OVERWRITING;
 		}
-		free(name);
 	  }
 
 	  v8::PropertyAttribute property_attribute = v8::None;

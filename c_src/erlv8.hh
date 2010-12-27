@@ -9,6 +9,8 @@
 using namespace std;
 using namespace __gnu_cxx;
 
+// This should be enough for our tags:
+#define MAX_ATOM_LEN 32 
 
 class VM; // fwd
 typedef struct _vm_res_t { 
