@@ -450,19 +450,14 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
   ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 
-  v8::Local<v8::Array> array = v8::Array::New(arguments.Length());
-
-  for (signed int i=0;i<arguments.Length();i++) {
-      array->Set(i,arguments[i]);
-  }
   // each call gets a unique ref
   ERL_NIF_TERM ref = enif_make_ref(vm->env);
   // prepare arguments
-  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
-  for (unsigned int i=0;i<array->Length();i++) {
-	arr[i] = js_to_term(vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
+  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * arguments.Length());
+  for (int i=0;i<arguments.Length();i++) {
+	arr[i] = js_to_term(vm->env,arguments[i]);
   }
-  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,array->Length());
+  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,arguments.Length());
   free(arr);
   // send invocation request
   SEND(vm->server,
