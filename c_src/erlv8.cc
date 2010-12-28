@@ -197,7 +197,9 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 	res->vm->tick = enif_make_copy(res->vm->env, argv[2]);
 	res->vm->tick_ref = enif_make_copy(res->vm->env, argv[1]);
 	res->vm->ticked = 1;
+	pthread_mutex_lock(&res->vm->tick_cond_mtx);
 	pthread_cond_broadcast(&res->vm->tick_cond);
+	pthread_mutex_unlock(&res->vm->tick_cond_mtx);
 	return enif_make_atom(env,"tack");
   } else {
 	return enif_make_badarg(env);
