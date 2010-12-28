@@ -148,7 +148,6 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  int isarray = strcmp(name,"erlv8_array")==0;
 
 	  if (isobj||isarray) {
-		val_res_t *res;
 		if (enif_get_resource(env,array[1],val_resource,(void **)(&res))) {
 		  return res->val->ToObject();
 		} else if (isobj && enif_is_proplist(env,array[1])) {
