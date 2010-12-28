@@ -249,6 +249,8 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 										 enif_make_resource(env, ptr),
 										 enif_make_pid(env, vm->server));
 
+	enif_release_resource(ptr);
+
 	return term;
   } else if	(val->IsUndefined()) {
     return enif_make_atom(env,"undefined");
@@ -283,6 +285,8 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 										 enif_make_pid(env, vm->server)
 										 );
 
+	enif_release_resource(ptr);
+
 	return term;
   } else if (val->IsObject()) {
 	val_res_t *ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
@@ -295,6 +299,8 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 										 enif_make_resource(env, ptr),
 										 enif_make_pid(env, vm->server)
 										 );
+	
+	enif_release_resource(ptr);
 
 	return term;
   } else if (val->IsExternal()) { // passing terms
