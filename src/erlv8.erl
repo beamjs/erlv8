@@ -679,6 +679,14 @@ v8_return_value_test() ->
 	O1 = F:call([O]),
 	?assert(O:equals(O1)),
 	stop().
-	
 
+clear_env_lockup_regression_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("f",fun (#erlv8_fun_invocation{},[X]) -> X end),
+	Global:set_value("f1",fun (#erlv8_fun_invocation{},[F]) -> F:call([1]) end),
+	?assertEqual({ok, 1}, erlv8_vm:run(VM, "f1(f)")),
+	stop().
+	
 -endif.

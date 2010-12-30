@@ -238,17 +238,28 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   if (val.IsEmpty()) {
 	return enif_make_atom(env,"undefined");
   } else if (val->IsFunction()) {  // the reason why this check is so high up here is because it is also an object, so it should be before any object.
-	val_res_t *ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
+	val_res_t *ptr;
+	v8::Handle<v8::Function> fun = v8::Handle<v8::Function>::Cast(val);
+	ERL_NIF_TERM resource_term;
+
+	if (!*fun->GetHiddenValue(v8::String::New("__erlv8__res__"))) {
+	  ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
+	  
+	  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	  ptr->val = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
+	  resource_term = enif_make_resource(env, ptr);
+	  fun->SetHiddenValue(v8::String::New("__erlv8__res__"), term_to_external(resource_term));
+	  enif_release_resource(ptr);
+	} else {
+	  resource_term = enif_make_copy(env, external_to_term(fun->GetHiddenValue(v8::String::New("__erlv8__res__"))));
+	}
+
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
-	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-	ptr->val = v8::Persistent<v8::Function>::New(v8::Handle<v8::Function>::Cast(val));
-
 	ERL_NIF_TERM term = enif_make_tuple3(env,enif_make_atom(env,"erlv8_fun"), 
-										 enif_make_resource(env, ptr),
+										 resource_term,
 										 enif_make_pid(env, vm->server));
 
-	enif_release_resource(ptr);
 
 	return term;
   } else if	(val->IsUndefined()) {
@@ -273,34 +284,51 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	  return enif_make_double(env,d);
 	}
   } else if (val->IsArray()) {
-	val_res_t *ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
-	ptr->val = v8::Persistent<v8::Array>::New(v8::Handle<v8::Array>::Cast(val));
-	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	val_res_t *ptr;
+	v8::Handle<v8::Array> arr = v8::Handle<v8::Array>::Cast(val);
+	ERL_NIF_TERM resource_term;
+	
+	if (!*arr->GetHiddenValue(v8::String::New("__erlv8__res__"))) {
+	  ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
+	  ptr->val = v8::Persistent<v8::Array>::New(v8::Handle<v8::Array>::Cast(val));
+	  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	  resource_term = enif_make_resource(env, ptr);
+	  arr->SetHiddenValue(v8::String::New("__erlv8__res__"), term_to_external(resource_term));
+	  enif_release_resource(ptr);
+	} else {
+	  resource_term = enif_make_copy(env, external_to_term(arr->GetHiddenValue(v8::String::New("__erlv8__res__"))));
+	}
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
 	ERL_NIF_TERM term = enif_make_tuple3(env,
 										 enif_make_atom(env, "erlv8_array"),
-										 enif_make_resource(env, ptr),
+										 resource_term,
 										 enif_make_pid(env, vm->server)
 										 );
 
-	enif_release_resource(ptr);
-
 	return term;
   } else if (val->IsObject()) {
-	val_res_t *ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
-	ptr->val = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
-	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	v8::Handle<v8::Object> obj = val->ToObject();
+	ERL_NIF_TERM resource_term;
+	if (!*obj->GetHiddenValue(v8::String::New("__erlv8__res__"))) {
+	  val_res_t *ptr;
+	  ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
+	  ptr->val = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
+	  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	  resource_term = enif_make_resource(env, ptr);
+	  obj->SetHiddenValue(v8::String::New("__erlv8__res__"), term_to_external(resource_term));
+	  enif_release_resource(ptr);
+	} else {
+	  resource_term = enif_make_copy(env, external_to_term(obj->GetHiddenValue(v8::String::New("__erlv8__res__"))));
+	}
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
 	ERL_NIF_TERM term = enif_make_tuple3(env,
 										 enif_make_atom(env, "erlv8_object"),
-										 enif_make_resource(env, ptr),
+										 resource_term,
 										 enif_make_pid(env, vm->server)
 										 );
 	
-	enif_release_resource(ptr);
-
 	return term;
   } else if (val->IsExternal()) { // passing terms
 	return enif_make_copy(env,external_to_term(val));

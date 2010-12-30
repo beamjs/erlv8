@@ -32,8 +32,6 @@ VM::VM() {
   v8::Locker locker;
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
-  v8::Context::Scope context_scope(context);
-  context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(this));
 };
 
 VM::~VM() { 
@@ -59,14 +57,33 @@ void VM::waitForTick() {
 };
 
 void VM::run() {
+  LHCS(context);
+  context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(this));
+
+  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
+  ptr->ctx = v8::Persistent<v8::Context>::New(context);
+  ERL_NIF_TERM resource_term = enif_make_resource(env, ptr);
+  enif_release_resource(ptr);
+
+  context->Global()->SetHiddenValue(v8::String::New("__erlv8__ctx__"),term_to_external(resource_term));
+
   ticker(0);
 };
 
-v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
+v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   v8::Locker locker;
   v8::Context::Scope context_scope(context);
   char name[MAX_ATOM_LEN];
   unsigned len;
+
+  ErlNifEnv * ref_env = enif_alloc_env();
+  ERL_NIF_TERM ref;
+
+  if ((unsigned long) ref0 == 0) {
+	ref = ref0;
+  } else {
+	ref = enif_make_copy(ref_env, ref0);
+  }
 
   while (1) {
 	v8::Unlocker unlocker;
@@ -99,6 +116,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 		  case NEXT:
 			break;
 		  case RETURN:
+			enif_free_env(ref_env);
 			return result;
 			break;
 		  }
@@ -106,6 +124,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref) {
 		i++;
 	  }
 	}
+	enif_clear_env(env);
   }
 };
 
@@ -225,13 +244,15 @@ static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
 	context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(res->vm));
 
 	ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-	ptr->ctx = context;
+	ptr->ctx = v8::Persistent<v8::Context>::New(context);
 	
-	ERL_NIF_TERM term = enif_make_resource(env, ptr);
+	ERL_NIF_TERM resource_term = enif_make_resource(env, ptr);
 	
 	enif_release_resource(ptr);
 	
-	return term;
+	context->Global()->SetHiddenValue(v8::String::New("__erlv8__ctx__"),term_to_external(resource_term));
+
+	return resource_term;
   } else {
 	return enif_make_badarg(env);
   };
@@ -445,11 +466,6 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
-  ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(arguments.Data()));
- 
-  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-
   // each call gets a unique ref
   ERL_NIF_TERM ref = enif_make_ref(vm->env);
   // prepare arguments
@@ -462,7 +478,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   // send invocation request
   SEND(vm->server,
 	   enif_make_tuple3(env,
-						enif_make_copy(env,term),
+						enif_make_copy(env,external_to_term(arguments.Data())),
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,arguments.IsConstructCall() ? "true" : "false"),
@@ -470,10 +486,9 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 										 js_to_term(env, arguments.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
-										 enif_make_resource(env, ptr)
+										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  enif_release_resource(ptr);
   return vm->ticker(ref);
 };
 
@@ -483,11 +498,6 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
 
   v8::Local<v8::Object> data = info.Data()->ToObject();
   
-  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-
-  ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(data->GetHiddenValue(v8::String::New("_getter"))));
-
   // each call gets a unique ref
   ERL_NIF_TERM ref = enif_make_ref(vm->env);
 
@@ -500,7 +510,7 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
   // send invocation request
   SEND(vm->server,
 	   enif_make_tuple3(env,
-						enif_make_copy(env,term),
+						enif_make_copy(env,external_to_term(data->GetHiddenValue(v8::String::New("_getter")))),
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,"false"),
@@ -508,10 +518,9 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
 										 js_to_term(env, info.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
-										 enif_make_resource(env, ptr)
+										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  enif_release_resource(ptr);
   return vm->ticker(ref);  
 }
 
@@ -520,10 +529,6 @@ void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
   v8::Local<v8::Object> data = info.Data()->ToObject();
-  ERL_NIF_TERM term = enif_make_copy(vm->env,external_to_term(data->GetHiddenValue(v8::String::New("_setter"))));
-
-  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
 
   // each call gets a unique ref
   ERL_NIF_TERM ref = enif_make_ref(vm->env);
@@ -538,7 +543,7 @@ void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v
   // send invocation request
   SEND(vm->server,
 	   enif_make_tuple3(env,
-						enif_make_copy(env,term),
+						enif_make_copy(env,external_to_term(data->GetHiddenValue(v8::String::New("_setter")))),
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,"false"),
@@ -546,10 +551,9 @@ void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v
 										 js_to_term(env, info.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
-										 enif_make_resource(env, ptr)
+										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  enif_release_resource(ptr);
   vm->ticker(ref);  
 }
 

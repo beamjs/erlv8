@@ -20,13 +20,14 @@ TickHandler(CallTickHandler) {
 	  args[i] = v8::Local<v8::Value>::New(term_to_js(vm->env,head));
 	  i++; current = tail;
 	}
-	v8::Handle<v8::Object> recv;
+	v8::Local<v8::Object> recv;
 	if (arity == 4) { // this is specified
 	  recv = term_to_js(vm->env, array[3])->ToObject();
 	} else {
 	  recv = fun_res->ctx->Global();
 	}
-	v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(fun_res->val);
+	v8::Persistent<v8::Function> f = v8::Persistent<v8::Function>::Cast(fun_res->val);
+
 	if (!*f->GetHiddenValue(v8::String::New("__erlv8__"))) { // js function
 	  v8::TryCatch try_catch;
 	  v8::Local<v8::Value> call_result = f->Call(recv, alen, args);
@@ -56,7 +57,7 @@ TickHandler(CallTickHandler) {
 
 	  ErlangFun(vm, external_to_term(f->GetHiddenValue((v8::String::New("__erlv8__")))), call_ref, recv, array);
 	}
-	  
+
 	delete [] args;
 	args = NULL;
   }
@@ -67,9 +68,6 @@ TickHandler(CallTickHandler) {
 void ErlangFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8::Object> recv, v8::Handle<v8::Array> array) {
   v8::HandleScope handle_scope;
  
-  ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
-  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
   for (unsigned int i=0;i<array->Length();i++) {
@@ -88,9 +86,8 @@ void ErlangFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8::Obje
 										 js_to_term(env, recv),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
-										 enif_make_resource(env, ptr)
+										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  enif_release_resource(ptr);
 };
 
