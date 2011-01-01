@@ -67,6 +67,7 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
 	term_ref_t * term_ref = (term_ref_t *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(object));
 	enif_free_env(term_ref->env);
 	enif_free(term_ref);
+	v8::V8::AdjustAmountOfExternalAllocatedMemory(-(long)sizeof(term_ref_t));
   }
 }
 
@@ -76,6 +77,7 @@ inline v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term) {
   term_ref->term = enif_make_copy(term_ref->env, term);
   v8::Persistent<v8::External> obj = v8::Persistent<v8::External>::New(v8::External::New(term_ref));
   obj.MakeWeak(NULL,weak_external_cleaner);
+  v8::V8::AdjustAmountOfExternalAllocatedMemory((long)sizeof(term_ref_t));
   return obj;
 }
 
