@@ -107,7 +107,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	} else if (strcmp(name,"null")==0) {
 	  result = v8::Null();
 	} else { // if it is not a special atom, convert it to a string
-	  result = v8::Local<v8::String>::New(v8::String::New(name));
+	  result = v8::String::New(name);
 	}
 	return result;
   } else if	(enif_get_int(env,term,&_int)) {
@@ -129,10 +129,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	enif_get_list_length(env, term, &len);
 	char * str = (char *) malloc(len + 1);
 	if (enif_get_string(env, term, str, len + 1, ERL_NIF_LATIN1)) {
-	  v8::Handle<v8::String> s = v8::String::New((const char *)str);
+	  v8::Local<v8::String> s = v8::String::New((const char *)str);
 	  free(str);
 	  return s;
-	  }
+	}
 	free(str);
   } else if (enif_is_tuple(env, term)) {
 	ERL_NIF_TERM *array;
@@ -153,7 +153,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		if (enif_get_resource(env,array[1],val_resource,(void **)(&res))) {
 		  return res->val->ToObject();
 		} else if (isobj && enif_is_proplist(env,array[1])) {
-		  v8::Handle<v8::Object> obj = v8::Object::New();
+		  v8::Local<v8::Object> obj = v8::Object::New();
 		  ERL_NIF_TERM head, tail;
 		  ERL_NIF_TERM current = array[1];
 		  int arity;
@@ -173,7 +173,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 		  enif_get_list_length(env, current, &alen);
 
-		  v8::Handle<v8::Array> arrobj = v8::Array::New(alen);
+		  v8::Local<v8::Array> arrobj = v8::Array::New(alen);
 
 		  i = 0;
 		  while (enif_get_list_cell(env, current, &head, &tail)) {
@@ -192,10 +192,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env,array[1]));
 		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(env,array[2]));
 		
-		v8::Handle<v8::Array> keys = o->GetPropertyNames();
+		v8::Local<v8::Array> keys = o->GetPropertyNames();
 
 		for (unsigned int i=0;i<keys->Length();i++) {
-		  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
+		  v8::Local<v8::Value> key = keys->Get(v8::Integer::New(i));
 		  f->Set(key,o->Get(key));
 		}
 	  
@@ -310,7 +310,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 
 	return term;
   } else if (val->IsObject()) {
-	v8::Handle<v8::Object> obj = val->ToObject();
+	v8::Local<v8::Object> obj = val->ToObject();
 	ERL_NIF_TERM resource_term;
 	if (!*obj->GetHiddenValue(v8::String::New("__erlv8__res__"))) {
 	  val_res_t *ptr;
