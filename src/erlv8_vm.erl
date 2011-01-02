@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,start/0,run/2,run/3,run/4,register/2,register/3,global/1,stop/1,
+-export([start_link/1,start/0,run/2,run/3,run/4,global/1,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
@@ -277,17 +277,6 @@ update_ticked(Ref, From, Tick, Ticked) ->
 start() ->
 	VM = erlv8_nif:new_vm(),
 	supervisor2:start_child(erlv8_sup,[VM]).
-
-register(Server, Mod) when is_atom(Mod) ->
-	register(Server, Mod, Mod).
-
-register(Server, Name, Mod) when is_atom(Mod) ->
-	register(Server, Name, fun () -> Mod:exports(Server) end),
-	Mod:init(Server);
-
-register(Server, Name, Mod) when is_function(Mod) ->
-	Global = global(Server),
-	Global:set_value(Name, Mod()).
 
 run(Server, Source) ->
 	run(Server, erlv8_context:get(Server), Source).

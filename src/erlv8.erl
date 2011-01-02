@@ -219,23 +219,25 @@ fun_obj_test() ->
 invocation_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[]) -> 123 end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation,[]) -> 123 end),
 	?assertEqual({ok, 123}, erlv8_vm:run(VM,"test()")),
 	stop().
 
 fun_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test0", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation, [F]) -> F:call([321]) end, F end),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test0", fun (#erlv8_fun_invocation{} = _Invocation, [F]) -> F:call([321]) end),
+    Global:set_value("test",  fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end),
 	?assertEqual({ok, 321}, erlv8_vm:run(VM,"f = function(x) { return test(x) }; test0(f);")),
 	stop().
 
 erlang_fun_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
 	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end),
 	T = Global:get_value("test"),
 	?assertEqual(321, T:call([321])),
 	stop().
@@ -243,14 +245,16 @@ erlang_fun_test() ->
 fun_fail_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end),
 	?assertMatch({throw, _},erlv8_vm:run(VM,"test();")),
 	stop().
 
 fun_fail_inside_badmatch_test() -> %% TODO: cover all standard exits?
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> ok = Val end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> ok = Val end),
 	?assertMatch({throw, _}, erlv8_vm:run(VM,"test('help');")),
 	stop().
 	
@@ -258,14 +262,16 @@ fun_fail_inside_badmatch_test() -> %% TODO: cover all standard exits?
 fun_vm_is_pid_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{ vm = VM1 } = _Invocation,[]) -> is_pid(VM1) end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{ vm = VM1 } = _Invocation,[]) -> is_pid(VM1) end),
 	?assertEqual({ok, true}, erlv8_vm:run(VM,"test();")),
 	stop().
 
 fun_returning_fun_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation,[Val]) -> Val end),
 	{ok, #erlv8_fun{vm=VM}=F} = erlv8_vm:run(VM,"f = function() {}; test(f);"),
 	O = F:object(),
 	?assertEqual([],O:proplist()),
@@ -274,7 +280,8 @@ fun_returning_fun_test() ->
 fun_new_vm_inside_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation,[]) -> {ok, _Pid} = erlv8_vm:start(), 321 end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation,[]) -> {ok, _Pid} = erlv8_vm:start(), 321 end),
 	?assertEqual({ok, 321},erlv8_vm:run(VM, "test()")),
 	stop().
 
@@ -314,13 +321,14 @@ fun_callback_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
 	Self = self(),
-	erlv8_vm:register(VM, "test", fun () -> F = fun (#erlv8_fun_invocation{} = _Invocation, [Cb]) -> 
-														spawn(fun () ->
-																	  timer:sleep(1000), %% allow ample time
-																	  Self ! {ok, Cb:call([1])}
-															  end),
-														undefined
-												   end, F end),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("test", fun (#erlv8_fun_invocation{} = _Invocation, [Cb]) -> 
+									 spawn(fun () ->
+												   timer:sleep(1000), %% allow ample time
+												   Self ! {ok, Cb:call([1])}
+										   end),
+									 undefined
+							 end),
 	
 	erlv8_vm:run(VM,"f = function(x) { return x}; test(f);"),
 	receive
