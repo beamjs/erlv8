@@ -73,7 +73,6 @@ void VM::run() {
 v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   v8::Locker locker;
   v8::Context::Scope context_scope(context);
-  v8::HandleScope handle_scope;
 
   char name[MAX_ATOM_LEN];
   unsigned len;
@@ -88,6 +87,8 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   }
 
   while (1) {
+	v8::HandleScope handle_scope;
+
 	{
 	  v8::Unlocker unlocker;
 	  requestTick();
