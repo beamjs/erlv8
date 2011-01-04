@@ -165,7 +165,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 			current = tail;
 		  }
-		  return v8::Local<v8::Object>::New(obj);
+		  return obj;
 		} else if (isarray && enif_is_list(env, array[1])) {
 		  unsigned int i,alen;
 		  ERL_NIF_TERM head, tail;
@@ -181,7 +181,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 			current = tail;
 			i++;
 		  }
-		  return v8::Local<v8::Array>::New(arrobj);
+		  return arrobj;
 		}
 	  }
 
