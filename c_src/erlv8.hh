@@ -84,7 +84,7 @@ public:
   
   vm_res_t * resource;
 
-  map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> fun_map;
+  map<ERL_NIF_TERM, v8::Handle<v8::Function>, cmp_erl_nif_term> fun_map;
   map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> pid_map;
   map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> ref_map;
 

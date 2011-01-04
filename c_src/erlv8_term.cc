@@ -220,25 +220,23 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
 
   } else if (enif_is_fun(env, term)) {
-	v8::Handle<v8::Value> external;
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term>::iterator iter = vm->fun_map.find(term);
+	map<ERL_NIF_TERM, v8::Handle<v8::Function>, cmp_erl_nif_term>::iterator iter = vm->fun_map.find(term);
 
 	if (iter != vm->fun_map.end()) {
-	  external = iter->second; // it was cached before
+	  return iter->second; // it was cached before
 	} else {
-	  external = term_to_external(term);
-	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(external_to_term(external), external)); // cache it
+	  v8::Handle<v8::Value> external = term_to_external(term);
+	  v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,external);
+	  v8::Local<v8::FunctionTemplate> empty_t = v8::FunctionTemplate::New(EmptyFun);
+	  
+	  v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
+	  f->SetHiddenValue(v8::String::New("__erlv8__"), external);
+	  f->SetHiddenValue(v8::String::New("__erlv8__empty__constructor__"), empty_t->GetFunction());
+	  
+	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Function> >(external_to_term(external), f)); // cache it
+	  return f;
 	}
-
-    v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,external);
-    v8::Local<v8::FunctionTemplate> empty_t = v8::FunctionTemplate::New(EmptyFun);
-
-	v8::Local<v8::Function> f = v8::Local<v8::Function>::Cast(t->GetFunction());
-	f->SetHiddenValue(v8::String::New("__erlv8__"), external);
-	f->SetHiddenValue(v8::String::New("__erlv8__empty__constructor__"), empty_t->GetFunction());
-
-	return f;
   } else if (enif_is_pid(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 	map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term>::iterator iter = vm->pid_map.find(term);
