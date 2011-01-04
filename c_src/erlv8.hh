@@ -7,6 +7,7 @@
 #include <iostream>
 #include <cstring>
 #include <cmath>
+#include <map>
 
 using namespace std;
 using namespace __gnu_cxx;
@@ -47,6 +48,14 @@ typedef struct _ctx_res_t {
   } 
 //
 
+struct cmp_erl_nif_term
+{
+  bool operator()(ERL_NIF_TERM a, ERL_NIF_TERM b)
+   {
+	 return enif_compare(a,b) < 0;
+   }
+};
+
 
 // Statics
 extern v8::Persistent<v8::ObjectTemplate> global_template;
@@ -74,6 +83,11 @@ public:
   ErlNifTid tid;
   
   vm_res_t * resource;
+
+  map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> fun_map;
+  map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> pid_map;
+  map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> ref_map;
+
   VM();
   ~VM();
   void requestTick();
