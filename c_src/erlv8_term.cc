@@ -228,7 +228,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  external = iter->second; // it was cached before
 	} else {
 	  external = term_to_external(term);
-	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(term, external)); // cache it
+	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(external_to_term(external), external)); // cache it
 	}
 
     v8::Local<v8::FunctionTemplate> t = v8::FunctionTemplate::New(WrapFun,external);
@@ -247,7 +247,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  return iter->second; // it was cached before
 	} else {
 	  v8::Handle<v8::Value> external = term_to_external(term);
-	  vm->pid_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(term, external)); // cache it
+	  vm->pid_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(external_to_term(external), external)); // cache it
 	  return external;
 	}
   } else if (enif_is_ref(env, term)) {
@@ -258,7 +258,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  return iter->second; // it was cached before
 	} else {
 	  v8::Handle<v8::Value> external = term_to_external(term);
-	  vm->ref_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(term, external)); // cache it
+	  vm->ref_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(external_to_term(external), external)); // cache it
 	  return external;
 	}
   }
