@@ -53,7 +53,7 @@ TickHandler(InstantiateTickHandler) {
 	  ErlangConstFun(vm,
 					 external_to_term(f->GetHiddenValue(v8::String::New("__erlv8__"))), 
 					 inst_ref,
-					 v8::Handle<v8::Function>::Cast(f->GetHiddenValue(v8::String::New("__erlv8__empty__constructor__")))->NewInstance(),
+					 empty_constructor->GetFunction()->NewInstance(),
 					 array);
 	}
 	  

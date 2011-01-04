@@ -59,6 +59,7 @@ struct cmp_erl_nif_term
 
 // Statics
 extern v8::Persistent<v8::ObjectTemplate> global_template;
+extern v8::Persistent<v8::FunctionTemplate> empty_constructor;
 extern ErlNifResourceType * vm_resource;
 extern ErlNifResourceType * val_resource;
 extern ErlNifResourceType * ctx_resource;

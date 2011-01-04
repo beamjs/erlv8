@@ -588,7 +588,8 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   v8::HandleScope handle_scope;
 
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-  
+  empty_constructor = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(EmptyFun));
+
   int preemption = 100; // default value
   enif_get_int(env, load_info, &preemption);
   v8::Locker::StartPreemption(preemption);
@@ -603,6 +604,7 @@ void unload(ErlNifEnv *env, void* priv_data)
 };
 
 v8::Persistent<v8::ObjectTemplate> global_template;
+v8::Persistent<v8::FunctionTemplate> empty_constructor;
 ErlNifResourceType * ctx_resource;
 ErlNifResourceType * vm_resource;
 ErlNifResourceType * val_resource;

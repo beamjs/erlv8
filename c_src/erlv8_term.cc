@@ -228,11 +228,9 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	} else {
 	  v8::Handle<v8::Value> external = term_to_external(term);
 	  v8::Persistent<v8::FunctionTemplate> t = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(WrapFun,external));
-	  v8::Local<v8::FunctionTemplate> empty_t = v8::FunctionTemplate::New(EmptyFun);
 	  
 	  v8::Local<v8::Function> f = t->GetFunction();
 	  f->SetHiddenValue(v8::String::New("__erlv8__"), external);
-	  f->SetHiddenValue(v8::String::New("__erlv8__empty__constructor__"), empty_t->GetFunction());
 	  
 	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate> >(external_to_term(external), t)); // cache it
 	  return f;
