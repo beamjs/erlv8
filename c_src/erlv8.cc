@@ -601,6 +601,7 @@ void unload(ErlNifEnv *env, void* priv_data)
 {
   v8::Locker::StopPreemption();
   global_template.Dispose();
+  empty_constructor.Dispose();
 };
 
 v8::Persistent<v8::ObjectTemplate> global_template;
