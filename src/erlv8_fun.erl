@@ -9,16 +9,16 @@ call({erlv8_object, _,_}=T) ->
 	call(T,[]);
 
 call(Args) when is_list(Args) ->
-	erlv8_vm:next_tick(VM, {call, Resource, Args}).
+	erlv8_vm:enqueue_tick(VM, {call, Resource, Args}).
 
 call({erlv8_object, _,_}=This, Args) when is_list(Args) ->
-	erlv8_vm:next_tick(VM, {call, Resource, Args, This}).
+	erlv8_vm:enqueue_tick(VM, {call, Resource, Args, This}).
 
 instantiate() ->
 	instantiate([]).
 
 instantiate(Args) when is_list(Args) ->
-	erlv8_vm:next_tick(VM, {inst, Resource, Args}).
+	erlv8_vm:enqueue_tick(VM, {inst, Resource, Args}).
 
 object() ->
 	{erlv8_object, Resource, VM}.

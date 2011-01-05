@@ -5,7 +5,8 @@
 
 %% API
 -export([start_link/1,start/0,run/2,run/3,run/4,global/1,stop/1,
-		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, next_tick/2, next_tick/3, next_tick/4,
+		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
+		 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
 
 %% gen_server2 callbacks
@@ -112,6 +113,17 @@ handle_call({to_detail_string, Val}, _From, #state { vm = VM } = State) ->
 handle_call(stop, _From, State) ->
 	{stop, normal, ok, State};
 
+handle_call({enqueue_tick, Tick}, From, State) ->
+	Ref = make_ref(),
+	handle_call({enqueue_tick, Tick, Ref}, From, State);
+
+handle_call({enqueue_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked = Ticked, flush_tick = true } = State) ->
+	tack = erlv8_nif:tick(VM, Ref, Tick),
+	{noreply, State#state{ ticks = Ticks, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }};
+
+handle_call({enqueue_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
+	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
+
 handle_call({next_tick, Tick}, From, State) ->
 	Ref = make_ref(),
 	handle_call({next_tick, Tick, Ref}, From, State);
@@ -121,7 +133,7 @@ handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked
 	{noreply, State#state{ ticks = Ticks, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }};
 
 handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
-	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
+	{noreply, State#state{ ticks = queue:in_r({Ref,{From,Tick}}, Ticks) }};
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
@@ -177,41 +189,41 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
 				  case Result of 
 					  {'EXIT',{badarg, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad argument(s)")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Bad argument(s)")}}});
 					  {'EXIT',{function_clause, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("No matching function implementation")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("No matching function implementation")}}});
 					  {'EXIT',{{badmatch, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, ?ErrorVal("Bad match")}});
+						  enqueue_tick(Self, {result, Ref, {throw, ?ErrorVal("Bad match")}});
 					  {'EXIT',{badarith,Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad arithmetic operation")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Bad arithmetic operation")}}});
 					  {'EXIT',{{case_clause, Val},Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No case clause matched")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No case clause matched")}}});
 					  {'EXIT',{if_clause, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Bad formed if expression, no true branch found")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Bad formed if expression, no true branch found")}}});
 					  {'EXIT',{{try_clause, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No matching branch is found when evaluating the of-section of a try expression")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No matching branch is found when evaluating the of-section of a try expression")}}});
 					  {'EXIT',{undef, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("The function cannot be found")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("The function cannot be found")}}});
 					  {'EXIT',{{badfun, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Bad function")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Bad function")}}});
 					  {'EXIT',{{badarity, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("A fun is applied to the wrong number of arguments")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("A fun is applied to the wrong number of arguments")}}});
 					  {'EXIT',{timeout_value, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("The timeout value in a receive..after expression is evaluated to something else than an integer or infinity")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("The timeout value in a receive..after expression is evaluated to something else than an integer or infinity")}}});
 					  {'EXIT',{noproc, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("Trying to link to a non-existing process")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Trying to link to a non-existing process")}}});
 					  {'EXIT',{{nocatch, Val}, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Trying to evaluate a throw outside a catch")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Trying to evaluate a throw outside a catch")}}});
 					  {'EXIT',{system_limit, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?Error("A system limit has been reached")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("A system limit has been reached")}}});
 					  {'EXIT',{Val, Trace}} ->
-						  next_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
 					  _ ->
 						  case ICC of 
 							  true ->
-								  next_tick(Self, {result, Ref, This});
+								  enqueue_tick(Self, {result, Ref, This});
 							  false ->
-								  next_tick(Self, {result, Ref, Result})
+								  enqueue_tick(Self, {result, Ref, Result})
 						  end
 				  end
 		  end),
@@ -285,7 +297,7 @@ run(Server, {_, _CtxRes} = Context, Source) ->
 	run(Server, Context, Source, {"unknown",0,0}).
 
 run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
-	next_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
+	enqueue_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
 
 global(Server) ->
 	Ctx = erlv8_context:get(Server),
@@ -299,6 +311,18 @@ to_string(Server, Val) ->
 
 to_detail_string(Server, Val) ->
 	gen_server2:call(Server,{to_detail_string, Val}).
+
+enqueue_tick(Server, Tick) ->
+	gen_server2:call(Server,{enqueue_tick, Tick}, infinity).
+
+enqueue_tick(Server, Tick, Ref) when is_reference(Ref) ->
+	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, infinity);
+
+enqueue_tick(Server, Tick, Timeout) ->
+	gen_server2:call(Server,{enqueue_tick, Tick}, Timeout).
+
+enqueue_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
+	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, Timeout).
 
 next_tick(Server, Tick) ->
 	gen_server2:call(Server,{next_tick, Tick}, infinity).

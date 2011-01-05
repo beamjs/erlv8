@@ -3,7 +3,7 @@
 -export([list/0,object/0,new/1, length/0, push/1, unshift/1, delete/1]).
 
 list() ->
-	erlv8_vm:next_tick(VM,{list,Resource}).
+	erlv8_vm:enqueue_tick(VM,{list,Resource}).
 
 object() ->
 	erlv8_object:new(Resource,VM).
