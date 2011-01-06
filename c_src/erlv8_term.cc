@@ -71,6 +71,12 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
   }
 }
 
+void weak_external_obj_cleaner(v8::Persistent<v8::Value> object, void * data) {
+  if (object.IsNearDeath()) {
+	object->ToObject()->SetInternalField(0,v8::Undefined());
+  }
+}
+
 inline v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term) {
   term_ref_t * term_ref = (term_ref_t *) enif_alloc(sizeof(term_ref_t));	
   term_ref->env = enif_alloc_env();										
@@ -237,25 +243,33 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
   } else if (enif_is_pid(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term>::iterator iter = vm->pid_map.find(term);
+	map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = vm->pid_map.find(term);
 
 	if (iter != vm->pid_map.end()) {
 	  return iter->second; // it was cached before
 	} else {
 	  v8::Handle<v8::Value> external = term_to_external(term);
-	  vm->pid_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(external_to_term(external), external)); // cache it
-	  return external;
+	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
+	  obj->SetPrototype(vm->external_proto_pid);
+	  obj->SetInternalField(0, external);
+	  vm->pid_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(external_to_term(external), obj)); // cache it
+	  return obj;
 	}
   } else if (enif_is_ref(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term>::iterator iter = vm->ref_map.find(term);
+	map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = vm->ref_map.find(term);
 
 	if (iter != vm->ref_map.end()) {
 	  return iter->second; // it was cached before
 	} else {
 	  v8::Handle<v8::Value> external = term_to_external(term);
-	  vm->ref_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Value> >(external_to_term(external), external)); // cache it
-	  return external;
+	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
+	  obj->SetPrototype(vm->external_proto_ref);
+	  obj->SetInternalField(0, external);
+	  vm->ref_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(external_to_term(external), obj)); // cache it
+	  return obj;
 	}
   }
 
@@ -330,26 +344,30 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	return term;
   } else if (val->IsObject()) {
 	v8::Local<v8::Object> obj = val->ToObject();
-	ERL_NIF_TERM resource_term;
-
-	val_res_t *ptr;
-	ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
-	ptr->val = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
-	ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-	resource_term = enif_make_resource(env, ptr);
-	enif_release_resource(ptr);
-
+	  
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
-	ERL_NIF_TERM term = enif_make_tuple3(env,
-										 enif_make_atom(env, "erlv8_object"),
-										 resource_term,
-										 enif_make_pid(env, vm->server)
-										 );
-	
-	return term;
-  } else if (val->IsExternal()) { // passing terms
-	return enif_make_copy(env,external_to_term(val));
+	if (obj->GetPrototype()->Equals(vm->external_proto_pid) ||
+		obj->GetPrototype()->Equals(vm->external_proto_ref)) {
+	  return enif_make_copy(env, external_to_term(v8::Handle<v8::External>::Cast(obj->GetInternalField(0))));
+	} else {
+	  ERL_NIF_TERM resource_term;
+	  
+	  val_res_t *ptr;
+	  ptr = (val_res_t *)enif_alloc_resource(val_resource, sizeof(val_res_t));
+	  ptr->val = v8::Persistent<v8::Object>::New(v8::Handle<v8::Object>::Cast(val));
+	  ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
+	  resource_term = enif_make_resource(env, ptr);
+	  enif_release_resource(ptr);
+	  
+	  ERL_NIF_TERM term = enif_make_tuple3(env,
+										   enif_make_atom(env, "erlv8_object"),
+										   resource_term,
+										   enif_make_pid(env, vm->server)
+										   );
+	  
+	  return term;
+	}
   } else {
 	return enif_make_atom(env,"$unknown");
   }

@@ -59,7 +59,9 @@ struct cmp_erl_nif_term
 
 // Statics
 extern v8::Persistent<v8::ObjectTemplate> global_template;
+extern v8::Persistent<v8::ObjectTemplate> external_template;
 extern v8::Persistent<v8::FunctionTemplate> empty_constructor;
+
 extern ErlNifResourceType * vm_resource;
 extern ErlNifResourceType * val_resource;
 extern ErlNifResourceType * ctx_resource;
@@ -69,6 +71,9 @@ extern ErlNifResourceType * ctx_resource;
 class VM {
 public:
   v8::Persistent<v8::Context> context;
+
+  v8::Persistent<v8::Object> external_proto_pid;
+  v8::Persistent<v8::Object> external_proto_ref;
 
   ErlNifPid *server;
   ErlNifEnv *env;
@@ -86,8 +91,8 @@ public:
   vm_res_t * resource;
 
   map<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate>, cmp_erl_nif_term> fun_map;
-  map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> pid_map;
-  map<ERL_NIF_TERM, v8::Handle<v8::Value>, cmp_erl_nif_term> ref_map;
+  map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> pid_map;
+  map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> ref_map;
 
   VM();
   ~VM();

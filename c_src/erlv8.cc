@@ -36,6 +36,9 @@ VM::VM() {
 
 VM::~VM() { 
 	context.Dispose();
+	external_proto_pid.Dispose();
+	external_proto_ref.Dispose();
+
 	enif_free_env(env);
 	pthread_condattr_destroy(&tick_cond_attr);
 	pthread_cond_destroy(&tick_cond);
@@ -66,6 +69,9 @@ void VM::run() {
   enif_release_resource(ptr);
 
   context->Global()->SetHiddenValue(v8::String::New("__erlv8__ctx__"),term_to_external(resource_term));
+
+  external_proto_pid = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_ref = v8::Persistent<v8::Object>::New(external_template->NewInstance());
 
   ticker(0);
 };
@@ -588,6 +594,10 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   v8::HandleScope handle_scope;
 
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+
+  external_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
+  external_template->SetInternalFieldCount(1);
+
   empty_constructor = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(EmptyFun));
 
   int preemption = 100; // default value
@@ -601,11 +611,14 @@ void unload(ErlNifEnv *env, void* priv_data)
 {
   v8::Locker::StopPreemption();
   global_template.Dispose();
+  external_template.Dispose();
   empty_constructor.Dispose();
 };
 
 v8::Persistent<v8::ObjectTemplate> global_template;
+v8::Persistent<v8::ObjectTemplate> external_template;
 v8::Persistent<v8::FunctionTemplate> empty_constructor;
+
 ErlNifResourceType * ctx_resource;
 ErlNifResourceType * vm_resource;
 ErlNifResourceType * val_resource;
