@@ -260,10 +260,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
   } else if (enif_is_pid(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	return externalize_term(vm->pid_map, vm->external_proto_pid, term);
+	return externalize_term(vm->extern_map, vm->external_proto_pid, term);
   } else if (enif_is_ref(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	return externalize_term(vm->ref_map, vm->external_proto_ref, term);
+	return externalize_term(vm->extern_map, vm->external_proto_ref, term);
   }
 
   return v8::Undefined(); // if nothing else works, return undefined
@@ -340,8 +340,15 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	  
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
 
-	if (obj->GetPrototype()->Equals(vm->external_proto_pid) ||
-		obj->GetPrototype()->Equals(vm->external_proto_ref)) {
+	if (obj->GetPrototype()->Equals(vm->external_proto_num) ||
+		obj->GetPrototype()->Equals(vm->external_proto_atom) ||
+		obj->GetPrototype()->Equals(vm->external_proto_bin) ||
+		obj->GetPrototype()->Equals(vm->external_proto_ref) ||
+		obj->GetPrototype()->Equals(vm->external_proto_fun) ||
+		obj->GetPrototype()->Equals(vm->external_proto_port) ||
+		obj->GetPrototype()->Equals(vm->external_proto_pid) ||
+		obj->GetPrototype()->Equals(vm->external_proto_tuple) ||
+		obj->GetPrototype()->Equals(vm->external_proto_list)) {
 	  return enif_make_copy(env, external_to_term(v8::Handle<v8::External>::Cast(obj->GetInternalField(0))));
 	} else {
 	  ERL_NIF_TERM resource_term;

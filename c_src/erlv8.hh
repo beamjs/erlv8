@@ -72,8 +72,15 @@ class VM {
 public:
   v8::Persistent<v8::Context> context;
 
-  v8::Persistent<v8::Object> external_proto_pid;
+  v8::Persistent<v8::Object> external_proto_num;
+  v8::Persistent<v8::Object> external_proto_atom;
+  v8::Persistent<v8::Object> external_proto_bin;
   v8::Persistent<v8::Object> external_proto_ref;
+  v8::Persistent<v8::Object> external_proto_fun;
+  v8::Persistent<v8::Object> external_proto_port;
+  v8::Persistent<v8::Object> external_proto_pid;
+  v8::Persistent<v8::Object> external_proto_tuple;
+  v8::Persistent<v8::Object> external_proto_list;
 
   ErlNifPid *server;
   ErlNifEnv *env;
@@ -91,8 +98,7 @@ public:
   vm_res_t * resource;
 
   map<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate>, cmp_erl_nif_term> fun_map;
-  map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> pid_map;
-  map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> ref_map;
+  map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> extern_map;
 
   VM();
   ~VM();
@@ -119,6 +125,7 @@ TickHandler(ScriptTickHandler);
 TickHandler(ToStringTickHandler);
 TickHandler(ToDetailStringTickHandler);
 TickHandler(ExternProtoTickHandler);
+TickHandler(ExternalizeTickHandler);
 TickHandler(UnknownTickHandler);
 
 class Send {
@@ -154,6 +161,7 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term);
 v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM term);
 v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term);
 ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val);
+v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> cache, v8::Handle<v8::Object> proto, ERL_NIF_TERM term);
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term);
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val);
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments);

@@ -21,6 +21,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"to_string", ToStringTickHandler},
   {"to_detail_string", ToDetailStringTickHandler},
   {"extern_proto", ExternProtoTickHandler},
+  {"externalize", ExternalizeTickHandler},
   {NULL, UnknownTickHandler} 
 };
 
@@ -39,8 +40,15 @@ VM::VM() {
 
 VM::~VM() { 
 	context.Dispose();
-	external_proto_pid.Dispose();
+	external_proto_num.Dispose();
+	external_proto_atom.Dispose();
+	external_proto_bin.Dispose();
 	external_proto_ref.Dispose();
+	external_proto_fun.Dispose();
+	external_proto_port.Dispose();
+	external_proto_pid.Dispose();
+	external_proto_tuple.Dispose();
+	external_proto_list.Dispose();
 
 	enif_free_env(env);
 	pthread_condattr_destroy(&tick_cond_attr);
@@ -73,8 +81,15 @@ void VM::run() {
 
   context->Global()->SetHiddenValue(v8::String::New("__erlv8__ctx__"),term_to_external(resource_term));
 
-  external_proto_pid = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_num = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_atom = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_bin = v8::Persistent<v8::Object>::New(external_template->NewInstance());
   external_proto_ref = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_fun = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_port = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_pid = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_tuple = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+  external_proto_list = v8::Persistent<v8::Object>::New(external_template->NewInstance());
 
   ticker(0);
 };

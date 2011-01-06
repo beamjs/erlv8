@@ -700,20 +700,32 @@ clear_env_lockup_regression_test() ->
 extern_proto_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-
-	PidProto = erlv8_extern:get_pid_proto(VM),
-	PidProto:set_value("toString", fun(#erlv8_fun_invocation{},[]) -> "pid" end),
-
-	RefProto = erlv8_extern:get_ref_proto(VM),
-	RefProto:set_value("toString", fun(#erlv8_fun_invocation{},[]) -> "ref" end),
-
 	Global = erlv8_vm:global(VM),
-	Global:set_value("pid", self()),
-	Global:set_value("ref", make_ref()),
+	lists:foreach(fun({Type, Val}) ->
+						  Proto = erlv8_extern:get_proto(VM, Type),
+						  Proto:set_value("toString", fun(#erlv8_fun_invocation{},[]) -> Type end),
+						  Global:set_value("val", Val),
+						  ?assertEqual({ok, atom_to_list(Type)}, erlv8_vm:run(VM, "val.toString()"))
+				  end, [{ref, make_ref()},
+						{pid, self()}]),
+	stop().
 
-	?assertEqual({ok, "pid"}, erlv8_vm:run(VM, "pid.toString()")),
-	?assertEqual({ok, "ref"}, erlv8_vm:run(VM, "ref.toString()")),
-
+externalize_proto_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	lists:foreach(fun(Val) ->
+						  Global:set_value("val", erlv8_extern:extern(VM, Val)),
+						  ?assertEqual(Val, Global:get_value("val"))
+				  end, [1,
+						atom,
+						<<>>,
+						make_ref(),
+						fun() -> ok end,
+						open_port({spawn, "ls"},[stream]),
+						self(),
+						{1,2,3, self()},
+						[1,2,{3,2,1}]]),
 	stop().
 	
 -endif.
