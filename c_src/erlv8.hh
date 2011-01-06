@@ -116,6 +116,8 @@ TickHandler(SetTickHandler);
 TickHandler(ProplistTickHandler);
 TickHandler(ListTickHandler);
 TickHandler(ScriptTickHandler);
+TickHandler(ToStringTickHandler);
+TickHandler(ToDetailStringTickHandler);
 TickHandler(ExternProtoTickHandler);
 TickHandler(UnknownTickHandler);
 

@@ -313,10 +313,10 @@ stop(Server) ->
 	gen_server2:call(Server,stop).
 
 to_string(Server, Val) ->
-	gen_server2:call(Server,{to_string, Val}).
+	enqueue_tick(Server, {to_string, Val}).
 
 to_detail_string(Server, Val) ->
-	gen_server2:call(Server,{to_detail_string, Val}).
+	enqueue_tick(Server, {to_detail_string, Val}).
 
 enqueue_tick(Server, Tick) ->
 	gen_server2:call(Server,{enqueue_tick, Tick}, infinity).

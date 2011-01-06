@@ -18,6 +18,8 @@ static ErlV8TickHandler tick_handlers[] =
   {"proplist", ProplistTickHandler},
   {"list", ListTickHandler},
   {"script", ScriptTickHandler},
+  {"to_string", ToStringTickHandler},
+  {"to_detail_string", ToDetailStringTickHandler},
   {"extern_proto", ExternProtoTickHandler},
   {NULL, UnknownTickHandler} 
 };
@@ -193,30 +195,6 @@ static ERL_NIF_TERM context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 	return term;
   };
   return enif_make_badarg(env);
-};
-
-static ERL_NIF_TERM to_string(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  vm_res_t *res;
-  if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
-	{
-	  LHCS(res->vm->context);
-	  return js_to_term(env,term_to_js(env,argv[1])->ToString());
-	}
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
-static ERL_NIF_TERM to_detail_string(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  vm_res_t *res;
-  if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
-	{
-	  LHCS(res->vm->context);
-	  return js_to_term(env,term_to_js(env,argv[1])->ToDetailString());
-	}
-  } else {
-	return enif_make_badarg(env);
-  };
 };
 
 static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -447,8 +425,6 @@ static ErlNifFunc nif_funcs[] =
   {"context", 1, context},
   {"new_context", 1, new_context},
   {"global",1, global},
-  {"to_string",2, to_string},
-  {"to_detail_string",2, to_detail_string},
   {"tick",3, tick},
   {"object_set_hidden",3, object_set_hidden},
   {"object_get_hidden",2, object_get_hidden},

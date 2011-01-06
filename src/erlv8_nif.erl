@@ -1,7 +1,7 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([init/0,new_vm/0,set_server/2,global/1,context/1, new_context/1, to_string/2,to_detail_string/2,tick/3,
+-export([init/0,new_vm/0,set_server/2,global/1,context/1, new_context/1, tick/3,
 		 object_set_hidden/3, object_get_hidden/2,object_set_proto/2, object_get_proto/1, object_delete/2, 
 		 object_set_accessor/3, object_set_accessor/4, object_set_accessor/5, object_set_accessor/6, object_set_accessor/7,
 		 value_equals/3, value_strict_equals/3, value_taint/2]).
@@ -43,12 +43,6 @@ new_context(_VMObject) ->
 	error(not_loaded).
 
 global(_ContextObject) ->
-	error(not_loaded).
-
-to_string(_VMObject,_Obj) ->
-	error(not_loaded).
-
-to_detail_string(_VMObject,_Obj) ->
 	error(not_loaded).
 
 tick(_VMObject, _Ref, _Tick) ->
