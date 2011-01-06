@@ -696,5 +696,24 @@ clear_env_lockup_regression_test() ->
 	Global:set_value("f1",fun (#erlv8_fun_invocation{},[F]) -> F:call([1]) end),
 	?assertEqual({ok, 1}, erlv8_vm:run(VM, "f1(f)")),
 	stop().
+
+extern_proto_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+
+	PidProto = erlv8_extern:get_pid_proto(VM),
+	PidProto:set_value("toString", fun(#erlv8_fun_invocation{},[]) -> "pid" end),
+
+	RefProto = erlv8_extern:get_ref_proto(VM),
+	RefProto:set_value("toString", fun(#erlv8_fun_invocation{},[]) -> "ref" end),
+
+	Global = erlv8_vm:global(VM),
+	Global:set_value("pid", self()),
+	Global:set_value("ref", make_ref()),
+
+	?assertEqual({ok, "pid"}, erlv8_vm:run(VM, "pid.toString()")),
+	?assertEqual({ok, "ref"}, erlv8_vm:run(VM, "ref.toString()")),
+
+	stop().
 	
 -endif.

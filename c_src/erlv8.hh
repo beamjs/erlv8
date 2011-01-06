@@ -116,6 +116,7 @@ TickHandler(SetTickHandler);
 TickHandler(ProplistTickHandler);
 TickHandler(ListTickHandler);
 TickHandler(ScriptTickHandler);
+TickHandler(ExternProtoTickHandler);
 TickHandler(UnknownTickHandler);
 
 class Send {

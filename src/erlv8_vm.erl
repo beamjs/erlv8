@@ -4,7 +4,7 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,start/0,run/2,run/3,run/4,global/1,stop/1,
+-export([start_link/1,start/0,vm_resource/1,run/2,run/3,run/4,global/1,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
 		 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
 		 stor/3, retr/2]).
@@ -78,6 +78,9 @@ init([VM]) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+handle_call(vm_resource, _From, #state{ vm = VM } = State) ->
+	{reply, VM, State};
+
 handle_call({stor, Key, Value}, _From, #state{ storage = Storage } = State) ->
 	{reply, ok, State#state{ storage = [{Key, Value}|Storage] }};
 
@@ -289,6 +292,9 @@ update_ticked(Ref, From, Tick, Ticked) ->
 start() ->
 	VM = erlv8_nif:new_vm(),
 	supervisor2:start_child(erlv8_sup,[VM]).
+
+vm_resource(Server) ->
+	gen_server2:call(Server, vm_resource).
 
 run(Server, Source) ->
 	run(Server, erlv8_context:get(Server), Source).
