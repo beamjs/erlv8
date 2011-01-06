@@ -22,6 +22,11 @@ static ErlV8TickHandler tick_handlers[] =
   {"to_detail_string", ToDetailStringTickHandler},
   {"extern_proto", ExternProtoTickHandler},
   {"externalize", ExternalizeTickHandler},
+  {"internal_count", InternalCountTickHandler},
+  {"set_internal", SetInternalTickHandler},
+  {"set_internal_extern", SetInternalTickHandler},
+  {"get_internal", GetInternalTickHandler},
+  {"get_internal_extern", GetInternalTickHandler},
   {NULL, UnknownTickHandler} 
 };
 

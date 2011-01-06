@@ -127,6 +127,9 @@ TickHandler(ToDetailStringTickHandler);
 TickHandler(ExternProtoTickHandler);
 TickHandler(ExternalizeTickHandler);
 TickHandler(UnknownTickHandler);
+TickHandler(InternalCountTickHandler);
+TickHandler(SetInternalTickHandler);
+TickHandler(GetInternalTickHandler);
 
 class Send {
 public:
@@ -166,3 +169,5 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term);
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val);
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments);
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments);
+
+v8::Handle<v8::Object> extern_name_to_proto(VM * vm, char *name);

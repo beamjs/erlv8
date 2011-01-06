@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-inline v8::Handle<v8::Object> name_to_proto(VM * vm, char *name) {
+v8::Handle<v8::Object> extern_name_to_proto(VM * vm, char *name) {
   v8::Handle<v8::Object> proto;
 
   if (!strcmp(name,"num")) {
@@ -37,7 +37,7 @@ TickHandler(ExternProtoTickHandler) {
   enif_get_atom_length(vm->env, array[1], &len, ERL_NIF_LATIN1);
   enif_get_atom(vm->env,array[1],(char *)&name,len + 1, ERL_NIF_LATIN1);
   
-  v8::Handle<v8::Object> proto = name_to_proto(vm, name);
+  v8::Handle<v8::Object> proto = extern_name_to_proto(vm, name);
 
   SEND(vm->server,
 	   enif_make_tuple3(env,
@@ -58,7 +58,7 @@ TickHandler(ExternalizeTickHandler) {
   enif_get_atom_length(vm->env, array[1], &len, ERL_NIF_LATIN1);
   enif_get_atom(vm->env,array[1],(char *)&name,len + 1, ERL_NIF_LATIN1);
   
-  v8::Handle<v8::Object> proto = name_to_proto(vm, name);
+  v8::Handle<v8::Object> proto = extern_name_to_proto(vm, name);
   v8::Handle<v8::Object> obj = externalize_term(vm->extern_map, proto, array[2]);
   
   ERL_NIF_TERM resource_term;

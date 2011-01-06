@@ -1,5 +1,6 @@
 -module(erlv8_object,[Resource,VM]).
 -export([proplist/0, set_value/2, set_value/3, set_hidden_value/2, get_value/1, get_value/2, get_hidden_value/1, get_hidden_value/2, 
+		 internal_field_count/0, get_internal_field/1, get_internal_field/2, set_internal_field/2,
 		 set_prototype/1, get_prototype/0, delete/1, set_accessor/2, set_accessor/3, set_accessor/4, set_accessor/5,
 		 equals/1, strict_equals/1, call/1, call/2,new/1]).
 
@@ -36,6 +37,21 @@ get_hidden_value(Key, Default) ->
 		Val ->
 			Val
 	end.
+
+internal_field_count() ->
+	erlv8_vm:enqueue_tick(VM, {internal_count, Resource}).
+
+get_internal_field(Index) ->
+	erlv8_vm:enqueue_tick(VM, {get_internal, Resource, Index}).
+
+get_internal_field(Index, extern) ->
+	erlv8_vm:enqueue_tick(VM, {get_internal_extern, Resource, Index}).
+
+set_internal_field(Index, {extern, Value}) ->
+	erlv8_vm:enqueue_tick(VM, {set_internal_extern, Resource, Index, Value, erlv8_extern:type(Value)});
+
+set_internal_field(Index, Value) ->
+	erlv8_vm:enqueue_tick(VM, {set_internal, Resource, Index, Value}).
 
 set_prototype(Proto) ->
 	erlv8_nif:object_set_proto(Resource, Proto).
