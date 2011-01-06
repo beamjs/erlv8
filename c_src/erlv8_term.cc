@@ -92,6 +92,23 @@ inline ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val) {
 	return term_ref->term;
 }
 
+v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> cache, v8::Handle<v8::Object> proto, ERL_NIF_TERM term) {
+	map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = cache.find(term);
+
+	if (iter != cache.end()) {
+	  return iter->second; // it was cached before
+	} else {
+	  v8::Handle<v8::Value> external = term_to_external(term);
+	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
+	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
+	  obj->SetPrototype(proto);
+	  obj->SetInternalField(0, external);
+	  cache.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(external_to_term(external), obj)); // cache it
+	  return obj;
+	}
+
+}
+
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   unsigned len;
@@ -243,34 +260,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
   } else if (enif_is_pid(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = vm->pid_map.find(term);
-
-	if (iter != vm->pid_map.end()) {
-	  return iter->second; // it was cached before
-	} else {
-	  v8::Handle<v8::Value> external = term_to_external(term);
-	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
-	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
-	  obj->SetPrototype(vm->external_proto_pid);
-	  obj->SetInternalField(0, external);
-	  vm->pid_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(external_to_term(external), obj)); // cache it
-	  return obj;
-	}
+	return externalize_term(vm->pid_map, vm->external_proto_pid, term);
   } else if (enif_is_ref(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-	map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = vm->ref_map.find(term);
-
-	if (iter != vm->ref_map.end()) {
-	  return iter->second; // it was cached before
-	} else {
-	  v8::Handle<v8::Value> external = term_to_external(term);
-	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
-	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
-	  obj->SetPrototype(vm->external_proto_ref);
-	  obj->SetInternalField(0, external);
-	  vm->ref_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(external_to_term(external), obj)); // cache it
-	  return obj;
-	}
+	return externalize_term(vm->ref_map, vm->external_proto_ref, term);
   }
 
   return v8::Undefined(); // if nothing else works, return undefined
