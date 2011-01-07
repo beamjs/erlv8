@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
+typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
 
 struct ErlV8TickHandler {
   const char * name;
@@ -31,12 +31,7 @@ static ErlV8TickHandler tick_handlers[] =
 
 
 VM::VM() {
-  ticked = 0;
   env = enif_alloc_env();
-  pthread_condattr_init(&tick_cond_attr);
-  pthread_cond_init(&tick_cond, &tick_cond_attr);
-  pthread_mutexattr_init(&tick_cond_mtx_attr);
-  pthread_mutex_init(&tick_cond_mtx, &tick_cond_mtx_attr);
   v8::Locker locker;
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
@@ -55,23 +50,9 @@ VM::~VM() {
 	external_proto_list.Dispose();
 
 	enif_free_env(env);
-	pthread_condattr_destroy(&tick_cond_attr);
-	pthread_cond_destroy(&tick_cond);
-	pthread_mutexattr_destroy(&tick_cond_mtx_attr);
-	pthread_mutex_destroy(&tick_cond_mtx);
-};
 
-void VM::requestTick() {
-  SEND(server,enif_make_atom(env,"tick_me"));
-};
-
-void VM::waitForTick() {
-  pthread_mutex_lock(&tick_cond_mtx);
-  while (!ticked) { 
-	pthread_cond_wait(&tick_cond, &tick_cond_mtx);
-  }
-  pthread_mutex_unlock(&tick_cond_mtx);
-  ticked = 0;
+	zmq_close(push_socket);
+	zmq_close(pull_socket);
 };
 
 void VM::run() {
@@ -95,6 +76,16 @@ void VM::run() {
   external_proto_tuple = v8::Persistent<v8::Object>::New(external_template->NewInstance());
   external_proto_list = v8::Persistent<v8::Object>::New(external_template->NewInstance());
 
+  push_socket = zmq_socket(zmq_context, ZMQ_PUSH);
+  pull_socket = zmq_socket(zmq_context, ZMQ_PULL);
+
+  char socket_id[64];
+
+  sprintf(socket_id, "inproc://tick-publisher-%ld", (long int) tid);
+
+  zmq_bind(push_socket, socket_id);
+  zmq_connect(pull_socket, socket_id);
+
   ticker(0);
 };
 
@@ -114,14 +105,24 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	ref = enif_make_copy(ref_env, ref0);
   }
 
+  zmq_msg_t msg;
+  Tick tick_s;
+  ERL_NIF_TERM tick, tick_ref;
+ 
   while (1) {
 	v8::HandleScope handle_scope;
 
 	{
 	  v8::Unlocker unlocker;
-	  requestTick();
-	  waitForTick(); 
+	  zmq_msg_init (&msg);
+	  zmq_recv (pull_socket, &msg, 0);
+	  memcpy(&tick_s, zmq_msg_data(&msg), sizeof(Tick));
+	  tick = enif_make_copy(env, tick_s.tick);
+	  tick_ref = enif_make_copy(env, tick_s.ref);
+	  zmq_msg_close(&msg);
 	}
+
+	
 	
 	if (enif_is_tuple(env, tick)) { // should be always true, just a sanity check
 	  
@@ -140,7 +141,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	  while (!stop_flag) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
-		  switch (tick_handlers[i].handler(this, name, ref, arity, array, result)) {
+		  switch (tick_handlers[i].handler(this, name, tick_ref, ref, arity, array, result)) {
 		  case DONE:
 			stop_flag = true;
 			break;
@@ -216,17 +217,29 @@ static ERL_NIF_TERM context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
   return enif_make_badarg(env);
 };
 
+void free_tick(void * data, void * hint) {
+  Tick * tick = reinterpret_cast<Tick *>(data);
+	
+  enif_free_env(tick->env);
+  free(tick);
+}
+
 static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   vm_res_t *res;
   if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
 	if ((!enif_is_ref(env, argv[1])))
 	  return enif_make_badarg(env);
-	res->vm->tick = enif_make_copy(res->vm->env, argv[2]);
-	res->vm->tick_ref = enif_make_copy(res->vm->env, argv[1]);
-	res->vm->ticked = 1;
-	pthread_mutex_lock(&res->vm->tick_cond_mtx);
-	pthread_cond_broadcast(&res->vm->tick_cond);
-	pthread_mutex_unlock(&res->vm->tick_cond_mtx);
+
+	zmq_msg_t tick_msg;
+	Tick * tick = (Tick *) malloc(sizeof(Tick));
+	tick->env = enif_alloc_env();
+	tick->tick = enif_make_copy(tick->env, argv[2]);
+	tick->ref = enif_make_copy(tick->env, argv[1]);
+
+	zmq_msg_init_data(&tick_msg, tick, sizeof(Tick), free_tick, NULL);
+	zmq_send(res->vm->push_socket, &tick_msg, ZMQ_NOBLOCK);
+	zmq_msg_close(&tick_msg);
+
 	return enif_make_atom(env,"tack");
   } else {
 	return enif_make_badarg(env);
@@ -582,6 +595,9 @@ static void ctx_resource_destroy(ErlNifEnv* env, void* obj) {
 
 int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 {
+
+  zmq_context = zmq_init(0); // we are using inproc only, so no I/O threads
+
   vm_resource = enif_open_resource_type(env, NULL, "erlv8_vm_resource", vm_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
   val_resource = enif_open_resource_type(env, NULL, "erlv8_val_resource", val_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
   ctx_resource = enif_open_resource_type(env, NULL, "erlv8_ctx_resource", ctx_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
@@ -609,6 +625,7 @@ void unload(ErlNifEnv *env, void* priv_data)
   global_template.Dispose();
   external_template.Dispose();
   empty_constructor.Dispose();
+  zmq_term(zmq_context);
 };
 
 v8::Persistent<v8::ObjectTemplate> global_template;
@@ -618,5 +635,7 @@ v8::Persistent<v8::FunctionTemplate> empty_constructor;
 ErlNifResourceType * ctx_resource;
 ErlNifResourceType * vm_resource;
 ErlNifResourceType * val_resource;
+
+void *zmq_context;
 
 ERL_NIF_INIT(erlv8_nif,nif_funcs,load,NULL,NULL,unload)

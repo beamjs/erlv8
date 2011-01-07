@@ -18,9 +18,7 @@
 -record(state, {
 		  vm,
 		  mods = [],
-		  ticks,
 		  ticked = [],
-		  flush_tick = false,
 		  storage = [],
 		  context
 		 }).
@@ -62,7 +60,7 @@ init([VM]) ->
 	process_flag(trap_exit, true),
 	erlv8_nif:set_server(VM, self()),
 	Ctx = erlv8_nif:context(VM),
-	{ok, #state{vm = VM, ticks = queue:new(), context = Ctx}}.
+	{ok, #state{vm = VM, context = Ctx}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -120,23 +118,17 @@ handle_call({enqueue_tick, Tick}, From, State) ->
 	Ref = make_ref(),
 	handle_call({enqueue_tick, Tick, Ref}, From, State);
 
-handle_call({enqueue_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked = Ticked, flush_tick = true } = State) ->
+handle_call({enqueue_tick, Tick, Ref}, From, #state{ vm = VM, ticked = Ticked } = State) ->
 	tack = erlv8_nif:tick(VM, Ref, Tick),
-	{noreply, State#state{ ticks = Ticks, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }};
-
-handle_call({enqueue_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
-	{noreply, State#state{ ticks = queue:in({Ref,{From,Tick}}, Ticks) }};
+	{noreply, State#state{ ticked = update_ticked(Ref, From, Tick, Ticked) }};
 
 handle_call({next_tick, Tick}, From, State) ->
 	Ref = make_ref(),
 	handle_call({next_tick, Tick, Ref}, From, State);
 
-handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticks = Ticks, ticked = Ticked, flush_tick = true } = State) ->
+handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticked = Ticked } = State) ->
 	tack = erlv8_nif:tick(VM, Ref, Tick),
-	{noreply, State#state{ ticks = Ticks, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }};
-
-handle_call({next_tick, Tick, Ref}, From, #state{ ticks = Ticks } = State) ->
-	{noreply, State#state{ ticks = queue:in_r({Ref,{From,Tick}}, Ticks) }};
+	{noreply, State#state{ ticked = update_ticked(Ref, From, Tick, Ticked) }};
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
@@ -168,21 +160,14 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({retick, Ref}, #state{ ticked = Ticked, ticks = Ticks } = State) ->
+handle_info({retick, Ref}, #state{ ticked = Ticked } = State) ->
 	case proplists:get_value(Ref, Ticked) of
 		undefined ->
 			{noreply, State};
 		{From, Tick} ->
-			{noreply, State#state { ticks = queue:in({Ref, {From, Tick}},Ticks) } }
-	end;
-
-handle_info(tick_me, #state{ vm = VM, ticks = Ticks, ticked = Ticked } = State) ->
-	case queue:out(Ticks) of
-		{empty, Ticks1} ->
-			{noreply, State#state{ ticks = Ticks1, flush_tick = true }};
-		{{value, {Ref, {From,Tick}}}, Ticks1} ->
-			tack = erlv8_nif:tick(VM, Ref, Tick),
-			{noreply, State#state{ ticks = Ticks1, ticked = update_ticked(Ref, From, Tick, Ticked), flush_tick = false }}
+			Self = self(),
+			spawn(fun() -> gen_server2:reply(From, next_tick(Self, Tick)) end),
+			{noreply, State}
 	end;
 
 %% Invocation

@@ -2,7 +2,7 @@
 
 TickHandler(SetTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
@@ -27,7 +27,7 @@ TickHandler(SetTickHandler) {
 
 TickHandler(SetInternalTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   char name[MAX_ATOM_LEN];
   unsigned len;

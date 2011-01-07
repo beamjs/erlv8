@@ -9,6 +9,8 @@
 #include <cmath>
 #include <map>
 
+#include <zmq.h>
+
 using namespace std;
 using namespace __gnu_cxx;
 
@@ -65,7 +67,15 @@ extern v8::Persistent<v8::FunctionTemplate> empty_constructor;
 extern ErlNifResourceType * vm_resource;
 extern ErlNifResourceType * val_resource;
 extern ErlNifResourceType * ctx_resource;
+
+extern void *zmq_context;
 //
+
+struct Tick {
+  ErlNifEnv * env;
+  ERL_NIF_TERM tick;
+  ERL_NIF_TERM ref;
+};
 
 // VM
 class VM {
@@ -85,13 +95,16 @@ public:
   ErlNifPid *server;
   ErlNifEnv *env;
 
-  int ticked;
-  ERL_NIF_TERM tick;
-  ERL_NIF_TERM tick_ref;
-  pthread_condattr_t tick_cond_attr;
-  pthread_cond_t tick_cond;
-  pthread_mutexattr_t tick_cond_mtx_attr;
-  pthread_mutex_t tick_cond_mtx;
+  // int ticked;
+  // ERL_NIF_TERM tick;
+  // ERL_NIF_TERM tick_ref;
+  // pthread_condattr_t tick_cond_attr;
+  // pthread_cond_t tick_cond;
+  // pthread_mutexattr_t tick_cond_mtx_attr;
+  // pthread_mutex_t tick_cond_mtx;
+
+  void * push_socket;
+  void * pull_socket;
 
   ErlNifTid tid;
   
@@ -102,8 +115,6 @@ public:
 
   VM();
   ~VM();
-  void requestTick();
-  void waitForTick();
   void run();
   v8::Handle<v8::Value> ticker(ERL_NIF_TERM ref);
 
@@ -111,7 +122,7 @@ public:
 
 enum TickHandlerResolution { DONE, RETURN, NEXT };
 
-#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
+#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
 
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);

@@ -2,7 +2,7 @@
 
 TickHandler(ProplistTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM proplist_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM proplist_ref = enif_make_copy(ref_env, tick_ref);
 
   val_res_t *res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&res))) {

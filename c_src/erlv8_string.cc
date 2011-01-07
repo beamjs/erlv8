@@ -2,7 +2,7 @@
 
 TickHandler(ToStringTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM to_string_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM to_string_ref = enif_make_copy(ref_env, tick_ref);
   SEND(vm->server,
 	   enif_make_tuple3(env,
 						enif_make_atom(env,"result"),
@@ -14,7 +14,7 @@ TickHandler(ToStringTickHandler) {
 
 TickHandler(ToDetailStringTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM to_string_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM to_string_ref = enif_make_copy(ref_env, tick_ref);
   SEND(vm->server,
 	   enif_make_tuple3(env,
 						enif_make_atom(env,"result"),

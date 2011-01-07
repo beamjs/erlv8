@@ -2,7 +2,7 @@
 
 TickHandler(ScriptTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM script_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM script_ref = enif_make_copy(ref_env, tick_ref);
   unsigned len;
   enif_get_list_length(vm->env, array[2], &len);
   char * buf = (char *) malloc(len + 1);

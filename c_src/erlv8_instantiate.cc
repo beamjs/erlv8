@@ -4,7 +4,7 @@ void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8:
 
 TickHandler(InstantiateTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM inst_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM inst_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *fun_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&fun_res))) {
 	ERL_NIF_TERM head, tail;

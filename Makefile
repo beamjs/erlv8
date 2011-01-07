@@ -24,7 +24,10 @@ deps/v8/.git/config:
 deps/v8/libv8.a: deps/v8/.git/config
 	@cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
-dependencies: deps/v8/libv8.a
+deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
+	@cd deps/zeromq2 && ./autogen && ./configure && make
+
+dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
 
 test: compile
 	@./rebar eunit

@@ -30,7 +30,7 @@ v8::Handle<v8::Object> extern_name_to_proto(VM * vm, char *name) {
 
 TickHandler(ExternProtoTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM extern_proto_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM extern_proto_ref = enif_make_copy(ref_env, tick_ref);
   char name[MAX_ATOM_LEN];
   unsigned len;
 
@@ -51,7 +51,7 @@ TickHandler(ExternProtoTickHandler) {
 
 TickHandler(ExternalizeTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM extern_ref = enif_make_copy(ref_env, vm->tick_ref);
+  ERL_NIF_TERM extern_ref = enif_make_copy(ref_env, tick_ref);
   char name[MAX_ATOM_LEN];
   unsigned len;
 
