@@ -21,7 +21,7 @@ deps/v8/.git/config:
 	@git submodule init
 	@git submodule update
 
-deps/zerom2/.git/HEAD:
+deps/zeromq2/.git/HEAD:
 	@git submodule init
 	@git submodule update
 
