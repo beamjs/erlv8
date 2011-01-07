@@ -21,6 +21,10 @@ deps/v8/.git/config:
 	@git submodule init
 	@git submodule update
 
+deps/zerom2/.git/HEAD:
+	@git submodule init
+	@git submodule update
+
 deps/v8/libv8.a: deps/v8/.git/config
 	@cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
