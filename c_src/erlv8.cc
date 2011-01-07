@@ -226,6 +226,7 @@ void free_tick(void * data, void * hint) {
 
 static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   vm_res_t *res;
+  int e;
   if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
 	if ((!enif_is_ref(env, argv[1])))
 	  return enif_make_badarg(env);
@@ -237,7 +238,9 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 	tick->ref = enif_make_copy(tick->env, argv[1]);
 
 	zmq_msg_init_data(&tick_msg, tick, sizeof(Tick), free_tick, NULL);
-	zmq_send(res->vm->push_socket, &tick_msg, ZMQ_NOBLOCK);
+	do {
+	  e = zmq_send(res->vm->push_socket, &tick_msg, ZMQ_NOBLOCK);
+	} while (e == EAGAIN);
 	zmq_msg_close(&tick_msg);
 
 	return enif_make_atom(env,"tack");
