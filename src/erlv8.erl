@@ -737,7 +737,7 @@ internal_field_test() ->
 	Extern = erlv8_extern:extern(VM, atom),
 
 	?assertEqual(1,Extern:internal_field_count()),
-	?assertEqual(atom, Extern:get_internal_field(0, extern)),
+	?assertEqual(atom, Extern:get_internal_field(0)),
 
 	Extern:set_internal_field(0,yes),
 	?assertEqual("yes", Extern:get_internal_field(0)),
@@ -745,9 +745,8 @@ internal_field_test() ->
 	Extern:set_internal_field(0,erlv8_extern:extern(VM, yes)),
 	?assertEqual(yes, Extern:get_internal_field(0)),
 	
-
 	Extern:set_internal_field(0,{extern, yes}),
-	?assertEqual(yes, Extern:get_internal_field(0, extern)),	
+	?assertEqual(yes, Extern:get_internal_field(0)),
 	stop().
 	
 	

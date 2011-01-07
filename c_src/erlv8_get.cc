@@ -28,14 +28,15 @@ TickHandler(GetInternalTickHandler) {
 	int index;
 	enif_get_int(vm->env, array[2], &index);
 
-	if (!strcmp(tick_name,"get_internal_extern")) {
+	v8::Local<v8::Value> get_result = obj_res->val->ToObject()->GetInternalField(index);
+	  
+	if (get_result->IsExternal()) {
 	  SEND(vm->server,
 		   enif_make_tuple3(env,
 							enif_make_atom(env,"result"),
 							enif_make_copy(env,get_ref),
-							external_to_term(obj_res->val->ToObject()->GetInternalField(index))));
+							external_to_term(get_result)));
 	} else {
-	  v8::Local<v8::Value> get_result = obj_res->val->ToObject()->GetInternalField(index);
 	  SEND(vm->server,
 		   enif_make_tuple3(env,
 							enif_make_atom(env,"result"),

@@ -26,7 +26,6 @@ static ErlV8TickHandler tick_handlers[] =
   {"set_internal", SetInternalTickHandler},
   {"set_internal_extern", SetInternalTickHandler},
   {"get_internal", GetInternalTickHandler},
-  {"get_internal_extern", GetInternalTickHandler},
   {NULL, UnknownTickHandler} 
 };
 
