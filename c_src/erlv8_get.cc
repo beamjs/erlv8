@@ -28,22 +28,31 @@ TickHandler(GetInternalTickHandler) {
 	int index;
 	enif_get_int(vm->env, array[2], &index);
 
-	v8::Local<v8::Value> get_result = obj_res->val->ToObject()->GetInternalField(index);
-	  
-	if (get_result->IsExternal()) {
-	  SEND(vm->server,
-		   enif_make_tuple3(env,
-							enif_make_atom(env,"result"),
-							enif_make_copy(env,get_ref),
-							external_to_term(get_result)));
+	if (index < 0 || (index + 1 > obj_res->val->ToObject()->InternalFieldCount())) {
+	  		SEND(vm->server,
+			 enif_make_tuple3(env,
+							  enif_make_atom(env,"result"),
+							  enif_make_copy(env,get_ref),
+							  enif_make_atom(env,"error")));
 	} else {
-	  SEND(vm->server,
-		   enif_make_tuple3(env,
-							enif_make_atom(env,"result"),
-							enif_make_copy(env,get_ref),
-							js_to_term(env,get_result)));
+	  
+	  v8::Local<v8::Value> get_result = obj_res->val->ToObject()->GetInternalField(index);
+	  
+	  if (get_result->IsExternal()) {
+		SEND(vm->server,
+			 enif_make_tuple3(env,
+							  enif_make_atom(env,"result"),
+							  enif_make_copy(env,get_ref),
+							  external_to_term(get_result)));
+	  } else {
+		SEND(vm->server,
+			 enif_make_tuple3(env,
+							  enif_make_atom(env,"result"),
+							  enif_make_copy(env,get_ref),
+							  js_to_term(env,get_result)));
+	  }
+	  
 	}
-	
   }
   enif_free_env(ref_env);
   return DONE;

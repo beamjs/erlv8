@@ -733,10 +733,16 @@ internal_field_test() ->
 	{ok, VM} = erlv8_vm:start(),
 	Global = erlv8_vm:global(VM),
 	?assertEqual(0,Global:internal_field_count()),
+	?assertEqual(error, Global:get_internal_field(-1)), 
+	?assertEqual(error, Global:get_internal_field(0)), 
+	?assertEqual(error, Global:set_internal_field(0, 1)),
 
 	Extern = erlv8_extern:extern(VM, atom),
 
 	?assertEqual(1,Extern:internal_field_count()),
+	?assertEqual(error, Global:get_internal_field(1)), 
+	?assertEqual(error, Global:set_internal_field(1, 1)),
+
 	?assertEqual(atom, Extern:get_internal_field(0)),
 
 	Extern:set_internal_field(0,yes),
