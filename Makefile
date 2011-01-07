@@ -29,7 +29,7 @@ deps/v8/libv8.a: deps/v8/.git/config
 	@cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
 deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
-	@cd deps/zeromq2 && ./autogen && ./configure && make
+	@cd deps/zeromq2 && ./autoge.shn && ./configure && make
 
 dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
 
