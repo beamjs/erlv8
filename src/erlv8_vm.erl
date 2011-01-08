@@ -20,7 +20,8 @@
 		  mods = [],
 		  ticked = [],
 		  storage = [],
-		  context
+		  context,
+		  debug
 		 }).
 
 -define(Error(Msg), lists:flatten(io_lib:format("~s: ~p",[Msg,Trace]))).
@@ -60,7 +61,7 @@ init([VM]) ->
 	process_flag(trap_exit, true),
 	erlv8_nif:set_server(VM, self()),
 	Ctx = erlv8_nif:context(VM),
-	{ok, #state{vm = VM, context = Ctx}}.
+	{ok, #state{vm = VM, context = Ctx, debug = ets:new(erlv8_vm_debug,[]) }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -224,6 +225,10 @@ handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
 			gen_server2:reply(From, Result),
 			{noreply, State#state{ ticked = proplists:delete(Ref, Ticked) } }
 	end;
+
+handle_info({'DEBUG',Name,Payload}, #state{ debug = Debug } = State) ->
+	ets:insert(Debug, {Name, Payload}),
+	{noreply, State};
 
 handle_info(_Info, State) ->
 	{noreply, State}.

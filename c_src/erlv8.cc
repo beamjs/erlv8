@@ -101,9 +101,12 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 
   if ((unsigned long) ref0 == 0) {
 	ref = ref0;
+	DEBUG(server, enif_make_atom(env, "current_ticker"), enif_make_atom(env, "top"));
   } else {
 	ref = enif_make_copy(ref_env, ref0);
+	DEBUG(server, enif_make_atom(env, "current_ticker"), enif_make_copy(env, ref));
   }
+
 
   zmq_msg_t msg;
   Tick tick_s;
@@ -122,7 +125,8 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	  zmq_msg_close(&msg);
 	}
 
-	
+	DEBUG(server, enif_make_tuple2(env, enif_make_atom(env, "last_tick"), (unsigned long) ref == 0 ? enif_make_atom(env,"top") :
+	                                    enif_make_copy(env, ref)),	enif_make_copy(env, tick));
 	
 	if (enif_is_tuple(env, tick)) { // should be always true, just a sanity check
 	  

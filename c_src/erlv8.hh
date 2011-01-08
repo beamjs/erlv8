@@ -182,3 +182,12 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments);
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments);
 
 v8::Handle<v8::Object> extern_name_to_proto(VM * vm, char *name);
+
+// Debugging
+
+#ifdef ERLV8_DEBUG
+#define DEBUG(pid,name,code) SEND(pid, enif_make_tuple3(env, enif_make_atom(env,"DEBUG"), name, code))
+#else
+#define DEBUG(pid,name,code)
+#endif
+
