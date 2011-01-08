@@ -37,7 +37,7 @@ test: compile
 	@./rebar eunit
 
 compile: dependencies
-	@./rebar compile
+	@EXTRA_CFLAGS= ./rebar compile
 	@cat ebin/erlv8.app | sed s/%sha%/`git log -1 --pretty=format:%h`/ > ebin/erlv8.app
 
 debug: dependencies
