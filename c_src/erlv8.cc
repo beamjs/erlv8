@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
+typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
 
 struct ErlV8TickHandler {
   const char * name;
@@ -145,7 +145,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	  while (!stop_flag) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
-		  switch (tick_handlers[i].handler(this, name, tick_ref, ref, arity, array, result)) {
+		  switch (tick_handlers[i].handler(this, name, tick, tick_ref, ref, arity, array, result)) {
 		  case DONE:
 			stop_flag = true;
 			break;

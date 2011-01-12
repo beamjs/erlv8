@@ -114,7 +114,7 @@ public:
 
 enum TickHandlerResolution { DONE, RETURN, NEXT };
 
-#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
+#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
 
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);
@@ -174,6 +174,8 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments);
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments);
 
 v8::Handle<v8::Object> extern_name_to_proto(VM * vm, char *name);
+
+void free_tick(void * data, void * hint);
 
 // Debugging
 

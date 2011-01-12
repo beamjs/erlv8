@@ -6,6 +6,6 @@ TickHandler(ResultTickHandler) {
 	result = term_to_js(vm->env,array[2]);
 	return RETURN;
   } else {
-   return DONE;
+   return NEXT;
   }
 }
