@@ -256,22 +256,33 @@ handle_info({retick, Ref}, #state{ ticked = Ticked } = State) ->
 	end;
 
 %% Invocation
-handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref = Ref } = Invocation,Args}, #state{} = State) when is_function(F), is_list(Args) ->
+handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref = Ref } = Invocation,Args}, #state{ ticked = Ticked } = State) when is_function(F), is_list(Args) ->
 	Self = self(),
 	spawn(fun () ->
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
+				  Result1 = 
 				  case Result of 
 					  {'EXIT',{Val, Trace}} when is_atom(Val) ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error(Val)}}});
+						  {throw, {error, ?Error(Val)}};
 					  {'EXIT',{{Tag, Val}, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal(Tag)}}});
+						  {throw, {error, ?ErrorVal(Tag)}};
 					  _ ->
 						  case ICC of 
 							  true ->
-								  enqueue_tick(Self, {result, Ref, This});
+								  This;
 							  false ->
-								  enqueue_tick(Self, {result, Ref, Result})
+								  Result
 						  end
+				  end,
+				  case proplists:get_value(Ref, Ticked) of
+					  {From, {call, _, _}} ->
+						  gen_server2:reply(From, Result1);
+					  {From, {inst, _, _}} ->
+						  gen_server2:reply(From, Result1);
+%% FIXME: can't do this here, but may be it is time to convert ticked into ets?
+%%						  {noreply, State#state{ ticked = proplists:delete(Ref, Ticked) } }
+					  _ ->
+						  enqueue_tick(Self, {result, Ref, Result1})
 				  end
 		  end),
 	{noreply, State};
