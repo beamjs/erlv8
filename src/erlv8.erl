@@ -755,5 +755,41 @@ internal_field_test() ->
 	?assertEqual(yes, Extern:get_internal_field(0)),
 	stop().
 	
+nested_result_tick_regression_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Global = erlv8_vm:global(VM),
+	Global:set_value("f1",fun (#erlv8_fun_invocation{},[]) -> register(erlv8_test_f1, self()), receive X -> X end end),
+	Global:set_value("f2",fun (#erlv8_fun_invocation{},[]) -> register(erlv8_test_f2, self()), receive X -> X end end),
+	Self = self(),
+	receive _ -> ignore end, %% WTF was that?
+	spawn(fun () -> 
+				  Self ! {f1, erlv8_vm:run(VM, "f1()")}
+		  end),
+	spawn(fun () -> 
+				  Self ! {f2, erlv8_vm:run(VM, "f2()")}
+		  end),
+	timer:sleep(200), %% give them some time to start (I know, I know)
+	%% so now the ticker should be in f2
+	%% but we'll return value for f1
+	erlv8_test_f1 ! 1,
+	%% and only then for f2
+	erlv8_test_f2 ! 2,
+	nested_result_tick_regression_test_loop([]),
+	stop().
+
+nested_result_tick_regression_test_loop([f1,f2]) ->
+	ok;
+nested_result_tick_regression_test_loop([f2,f1]) ->
+	ok;
+nested_result_tick_regression_test_loop(L) ->
+	receive
+		{f1, Result} ->
+			?assertEqual({ok, 1}, Result),
+			nested_result_tick_regression_test_loop([f1|L]);
+		{f2, Result} ->
+			?assertEqual({ok, 2}, Result),
+			nested_result_tick_regression_test_loop([f2|L])
+	end.
 	
 -endif.
