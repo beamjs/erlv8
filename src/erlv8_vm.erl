@@ -31,6 +31,90 @@
 %%%===================================================================
 %%% API
 %%%===================================================================
+start() ->
+	VM = erlv8_nif:new_vm(),
+	supervisor2:start_child(erlv8_sup,[VM]).
+
+vm_resource(Server) ->
+	gen_server2:call(Server, vm_resource).
+
+run(Server, Source) ->
+	run(Server, erlv8_context:get(Server), Source).
+
+run(Server, {_, _CtxRes} = Context, Source) ->
+	run(Server, Context, Source, {"unknown",0,0}).
+
+run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
+	enqueue_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
+
+global(Server) ->
+	Ctx = erlv8_context:get(Server),
+	erlv8_context:global(Ctx).
+
+stop(Server) ->
+	gen_server2:call(Server,stop).
+
+to_string(Server, Val) ->
+	enqueue_tick(Server, {to_string, Val}).
+
+to_detail_string(Server, Val) ->
+	enqueue_tick(Server, {to_detail_string, Val}).
+
+enqueue_tick(Server, Tick) ->
+	gen_server2:call(Server,{enqueue_tick, Tick}, infinity).
+
+enqueue_tick(Server, Tick, Ref) when is_reference(Ref) ->
+	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, infinity);
+
+enqueue_tick(Server, Tick, Timeout) ->
+	gen_server2:call(Server,{enqueue_tick, Tick}, Timeout).
+
+enqueue_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
+	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, Timeout).
+
+next_tick(Server, Tick) ->
+	gen_server2:call(Server,{next_tick, Tick}, infinity).
+
+next_tick(Server, Tick, Ref) when is_reference(Ref) ->
+	gen_server2:call(Server,{next_tick, Tick, Ref}, infinity);
+
+next_tick(Server, Tick, Timeout) ->
+	gen_server2:call(Server,{next_tick, Tick}, Timeout).
+
+next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
+	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
+
+taint(Server, Value) ->
+	gen_server2:call(Server, {taint, Value}).
+
+equals(Server, V1, V2) ->
+	gen_server2:call(Server, {equals, V1, V2}).
+
+strict_equals(Server, V1, V2) ->
+	gen_server2:call(Server, {strict_equals, V1, V2}).
+
+
+stor(Server, Key, Value) ->
+	gen_server2:call(Server, {stor, Key, Value}).
+
+retr(Server, Key) ->
+	gen_server2:call(Server, {retr, Key}).
+
+
+untaint({erlv8_object, _,_}=O) ->
+	{erlv8_object,lists:map(fun ({Key, Val}) ->
+									{Key, untaint(Val)}
+							end,O:proplist()), undefined};
+untaint({erlv8_array, _,_}=O) ->
+	{erlv8_array,lists:map(fun untaint/1,O:list()), undefined};
+untaint({erlv8_fun, _,_}=F) -> %% broken
+	{erlv8_object,untaint(F:object()),undefined};
+untaint([H|T]) ->
+	[untaint(H)|untaint(T)];
+untaint([]) ->
+	[];
+untaint(Other) ->
+	Other.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -276,90 +360,4 @@ update_ticked(_Ref, From, {result, _, _}, Ticked) -> %% do not insert results, n
 update_ticked(Ref, From, Tick, Ticked) ->
 	[{Ref,{From,Tick}}|Ticked].
 
-%%%===================================================================
-%%% Public functions
-%%%===================================================================
-start() ->
-	VM = erlv8_nif:new_vm(),
-	supervisor2:start_child(erlv8_sup,[VM]).
 
-vm_resource(Server) ->
-	gen_server2:call(Server, vm_resource).
-
-run(Server, Source) ->
-	run(Server, erlv8_context:get(Server), Source).
-
-run(Server, {_, _CtxRes} = Context, Source) ->
-	run(Server, Context, Source, {"unknown",0,0}).
-
-run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
-	enqueue_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
-
-global(Server) ->
-	Ctx = erlv8_context:get(Server),
-	erlv8_context:global(Ctx).
-
-stop(Server) ->
-	gen_server2:call(Server,stop).
-
-to_string(Server, Val) ->
-	enqueue_tick(Server, {to_string, Val}).
-
-to_detail_string(Server, Val) ->
-	enqueue_tick(Server, {to_detail_string, Val}).
-
-enqueue_tick(Server, Tick) ->
-	gen_server2:call(Server,{enqueue_tick, Tick}, infinity).
-
-enqueue_tick(Server, Tick, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, infinity);
-
-enqueue_tick(Server, Tick, Timeout) ->
-	gen_server2:call(Server,{enqueue_tick, Tick}, Timeout).
-
-enqueue_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{enqueue_tick, Tick, Ref}, Timeout).
-
-next_tick(Server, Tick) ->
-	gen_server2:call(Server,{next_tick, Tick}, infinity).
-
-next_tick(Server, Tick, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{next_tick, Tick, Ref}, infinity);
-
-next_tick(Server, Tick, Timeout) ->
-	gen_server2:call(Server,{next_tick, Tick}, Timeout).
-
-next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
-	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
-
-taint(Server, Value) ->
-	gen_server2:call(Server, {taint, Value}).
-
-equals(Server, V1, V2) ->
-	gen_server2:call(Server, {equals, V1, V2}).
-
-strict_equals(Server, V1, V2) ->
-	gen_server2:call(Server, {strict_equals, V1, V2}).
-
-
-stor(Server, Key, Value) ->
-	gen_server2:call(Server, {stor, Key, Value}).
-
-retr(Server, Key) ->
-	gen_server2:call(Server, {retr, Key}).
-
-
-untaint({erlv8_object, _,_}=O) ->
-	{erlv8_object,lists:map(fun ({Key, Val}) ->
-									{Key, untaint(Val)}
-							end,O:proplist()), undefined};
-untaint({erlv8_array, _,_}=O) ->
-	{erlv8_array,lists:map(fun untaint/1,O:list()), undefined};
-untaint({erlv8_fun, _,_}=F) -> %% broken
-	{erlv8_object,untaint(F:object()),undefined};
-untaint([H|T]) ->
-	[untaint(H)|untaint(T)];
-untaint([]) ->
-	[];
-untaint(Other) ->
-	Other.
