@@ -95,14 +95,6 @@ public:
   ErlNifPid *server;
   ErlNifEnv *env;
 
-  // int ticked;
-  // ERL_NIF_TERM tick;
-  // ERL_NIF_TERM tick_ref;
-  // pthread_condattr_t tick_cond_attr;
-  // pthread_cond_t tick_cond;
-  // pthread_mutexattr_t tick_cond_mtx_attr;
-  // pthread_mutex_t tick_cond_mtx;
-
   void * push_socket;
   void * pull_socket;
 
