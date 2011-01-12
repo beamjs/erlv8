@@ -261,36 +261,10 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 	spawn(fun () ->
 				  Result = (catch erlang:apply(F,[Invocation,Args])),
 				  case Result of 
-					  {'EXIT',{badarg, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Bad argument(s)")}}});
-					  {'EXIT',{function_clause, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("No matching function implementation")}}});
-					  {'EXIT',{{badmatch, Val}, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, ?ErrorVal("Bad match")}});
-					  {'EXIT',{badarith,Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Bad arithmetic operation")}}});
-					  {'EXIT',{{case_clause, Val},Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No case clause matched")}}});
-					  {'EXIT',{if_clause, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Bad formed if expression, no true branch found")}}});
-					  {'EXIT',{{try_clause, Val}, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("No matching branch is found when evaluating the of-section of a try expression")}}});
-					  {'EXIT',{undef, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("The function cannot be found")}}});
-					  {'EXIT',{{badfun, Val}, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Bad function")}}});
-					  {'EXIT',{{badarity, Val}, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("A fun is applied to the wrong number of arguments")}}});
-					  {'EXIT',{timeout_value, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("The timeout value in a receive..after expression is evaluated to something else than an integer or infinity")}}});
-					  {'EXIT',{noproc, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("Trying to link to a non-existing process")}}});
-					  {'EXIT',{{nocatch, Val}, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Trying to evaluate a throw outside a catch")}}});
-					  {'EXIT',{system_limit, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error("A system limit has been reached")}}});
-					  {'EXIT',{Val, Trace}} ->
-						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal("Unknown error")}}});
+					  {'EXIT',{Val, Trace}} when is_atom(Val) ->
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?Error(Val)}}});
+					  {'EXIT',{{Tag, Val}, Trace}} ->
+						  enqueue_tick(Self, {result, Ref, {throw, {error, ?ErrorVal(Tag)}}});
 					  _ ->
 						  case ICC of 
 							  true ->
