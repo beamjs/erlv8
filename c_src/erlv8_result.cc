@@ -7,7 +7,7 @@ TickHandler(ResultTickHandler) {
 	return RETURN;
   } else {
    zmq_msg_t tick_msg;
-   Tick * newtick = (Tick *) malloc(sizeof(Tick));
+   Tick * newtick = (Tick *) enif_alloc(sizeof(Tick));
    int e;
    
    newtick->env = enif_alloc_env();

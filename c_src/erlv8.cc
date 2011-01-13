@@ -231,7 +231,7 @@ void free_tick(void * data, void * hint) {
   Tick * tick = reinterpret_cast<Tick *>(data);
 	
   enif_free_env(tick->env);
-  free(tick);
+  enif_free(tick);
 }
 
 static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -242,7 +242,7 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 	  return enif_make_badarg(env);
 
 	zmq_msg_t tick_msg;
-	Tick * tick = (Tick *) malloc(sizeof(Tick));
+	Tick * tick = (Tick *) enif_alloc(sizeof(Tick));
 	tick->env = enif_alloc_env();
 	tick->tick = enif_make_copy(tick->env, argv[2]);
 	tick->ref = enif_make_copy(tick->env, argv[1]);
