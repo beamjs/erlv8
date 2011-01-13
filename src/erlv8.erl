@@ -714,6 +714,11 @@ externalize_proto_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
 	Global = erlv8_vm:global(VM),
+	Self = self(),
+	spawn(fun () -> Self ! open_port({spawn, "ls"},[stream]) end),
+	Port = receive
+			   P -> P
+		   end,
 	lists:foreach(fun(Val) ->
 						  Global:set_value("val", erlv8_extern:extern(VM, Val)),
 						  ?assertEqual(Val, Global:get_value("val"))
@@ -722,7 +727,7 @@ externalize_proto_test() ->
 						<<>>,
 						make_ref(),
 						fun() -> ok end,
-						open_port({spawn, "ls"},[stream]),
+						Port,
 						self(),
 						{1,2,3, self()},
 						[1,2,{3,2,1}]]),
@@ -762,7 +767,6 @@ nested_result_tick_regression_test() ->
 	Global:set_value("f1",fun (#erlv8_fun_invocation{},[]) -> register(erlv8_test_f1, self()), receive X -> X end end),
 	Global:set_value("f2",fun (#erlv8_fun_invocation{},[]) -> register(erlv8_test_f2, self()), receive X -> X end end),
 	Self = self(),
-	receive _ -> ignore end, %% WTF was that?
 	spawn(fun () -> 
 				  Self ! {f1, erlv8_vm:run(VM, "f1()")}
 		  end),
