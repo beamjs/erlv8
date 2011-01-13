@@ -496,6 +496,7 @@ v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {
 
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
+  v8::Locker locker;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
 
   // each call gets a unique ref
