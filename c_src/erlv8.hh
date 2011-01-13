@@ -96,6 +96,7 @@ public:
   ErlNifEnv *env;
 
   void * push_socket;
+  void * ticker_push_socket;
   void * pull_socket;
 
   ErlNifTid tid;

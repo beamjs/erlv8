@@ -16,7 +16,7 @@ TickHandler(ResultTickHandler) {
    
    zmq_msg_init_data(&tick_msg, newtick, sizeof(Tick), free_tick, NULL);
    do {
-	 e = zmq_send(vm->push_socket, &tick_msg, ZMQ_NOBLOCK);
+	 e = zmq_send(vm->ticker_push_socket, &tick_msg, ZMQ_NOBLOCK);
    } while (e == EAGAIN);
    zmq_msg_close(&tick_msg);
    
