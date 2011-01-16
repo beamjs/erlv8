@@ -18,6 +18,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"proplist", ProplistTickHandler},
   {"list", ListTickHandler},
   {"script", ScriptTickHandler},
+  {"gc", GCTickHandler},
   {"to_string", ToStringTickHandler},
   {"to_detail_string", ToDetailStringTickHandler},
   {"extern_proto", ExternProtoTickHandler},

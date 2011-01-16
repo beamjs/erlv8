@@ -7,7 +7,7 @@
 -export([start_link/1,start/0,vm_resource/1,run/2,run/3,run/4,global/1,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
 		 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
-		 stor/3, retr/2]).
+		 stor/3, retr/2, gc/1]).
 
 %% gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -115,6 +115,10 @@ untaint([]) ->
 untaint(Other) ->
 	Other.
 
+gc(Server) ->
+	(catch enqueue_tick(Server, {gc}, 0)),
+	ok.
+
 %%--------------------------------------------------------------------
 %% @doc
 %% Starts the server
@@ -214,7 +218,7 @@ handle_call({next_tick, Tick}, From, State) ->
 handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticked = Ticked } = State) ->
 	tack = erlv8_nif:tick(VM, Ref, Tick),
 	update_ticked(Ref, From, Tick, Ticked),
-	{noreply, State };
+	{noreply, State};
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
