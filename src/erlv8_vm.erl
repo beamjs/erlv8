@@ -275,6 +275,8 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 						  end
 				  end,
 				  case proplists:get_value(Ref, Ticked) of
+					  {From, {call, _, _, _}} ->
+						  gen_server2:reply(From, Result1);
 					  {From, {call, _, _}} ->
 						  gen_server2:reply(From, Result1);
 					  {From, {inst, _, _}} ->
