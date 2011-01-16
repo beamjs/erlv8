@@ -8,6 +8,7 @@
 #include <cstring>
 #include <cmath>
 #include <map>
+#include <queue>
 
 #include <zmq.h>
 
@@ -96,8 +97,10 @@ public:
   ErlNifEnv *env;
 
   void * push_socket;
-  void * ticker_push_socket;
   void * pull_socket;
+
+  queue<Tick> pre_pop_ticks;
+  queue<Tick> pop_ticks;
 
   ErlNifTid tid;
   

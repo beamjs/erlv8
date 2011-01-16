@@ -52,7 +52,6 @@ VM::~VM() {
 	enif_free_env(env);
 
 	zmq_close(push_socket);
-	zmq_close(ticker_push_socket);
 	zmq_close(pull_socket);
 };
 
@@ -78,19 +77,13 @@ void VM::run() {
   external_proto_list = v8::Persistent<v8::Object>::New(external_template->NewInstance());
 
   push_socket = zmq_socket(zmq_context, ZMQ_PUSH);
-  ticker_push_socket = zmq_socket(zmq_context, ZMQ_PUSH);
   pull_socket = zmq_socket(zmq_context, ZMQ_PULL);
 
   char socket_id[64];
   sprintf(socket_id, "inproc://tick-publisher-%ld", (long int) tid);
 
-  char ticker_socket_id[64];
-  sprintf(ticker_socket_id, "inproc://tick-publisher-ticker-%ld", (long int) tid);
-
   zmq_bind(push_socket, socket_id);
-  zmq_bind(ticker_push_socket, ticker_socket_id);
   zmq_connect(pull_socket, socket_id);
-  zmq_connect(pull_socket, ticker_socket_id);
 
   ticker(0);
 };
@@ -115,13 +108,19 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 
 
   zmq_msg_t msg;
-  Tick tick_s;
   ERL_NIF_TERM tick, tick_ref;
  
   while (1) {
 	v8::HandleScope handle_scope;
 
+	if (!pop_ticks.empty()) {
+	  Tick tick_p = pop_ticks.front();
+	  pop_ticks.pop();
+	  tick = enif_make_copy(env, tick_p.tick);
+	  tick_ref = enif_make_copy(env, tick_p.ref);
+	} else 
 	{
+	  Tick tick_s;
 	  v8::Unlocker unlocker;
 	  zmq_msg_init (&msg);
 	  zmq_recv (pull_socket, &msg, 0);
@@ -160,6 +159,10 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 		  case RETURN:
 			enif_free_env(ref_env);
 			enif_clear_env(env);
+			pop_ticks = pre_pop_ticks;
+
+			while (!pre_pop_ticks.empty())
+			  pre_pop_ticks.pop();
 			return result;
 			break;
 		  }
