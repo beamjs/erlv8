@@ -642,6 +642,15 @@ void unload(ErlNifEnv *env, void* priv_data)
   zmq_term(zmq_context);
 };
 
+int reload(ErlNifEnv* env, void** priv_data, ERL_NIF_TERM load_info) {
+  return 0;
+}
+
+int upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data, ERL_NIF_TERM load_info) {
+  return 0;
+}
+
+
 v8::Persistent<v8::ObjectTemplate> global_template;
 v8::Persistent<v8::ObjectTemplate> external_template;
 v8::Persistent<v8::FunctionTemplate> empty_constructor;
@@ -652,4 +661,4 @@ ErlNifResourceType * val_resource;
 
 void *zmq_context;
 
-ERL_NIF_INIT(erlv8_nif,nif_funcs,load,NULL,NULL,unload)
+ERL_NIF_INIT(erlv8_nif,nif_funcs,load,reload,upgrade,unload)
