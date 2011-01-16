@@ -18,7 +18,7 @@
 -record(state, {
 		  vm,
 		  mods = [],
-		  ticked = [],
+		  ticked,
 		  storage = [],
 		  context,
 		  debug
@@ -145,7 +145,7 @@ init([VM]) ->
 	process_flag(trap_exit, true),
 	erlv8_nif:set_server(VM, self()),
 	Ctx = erlv8_nif:context(VM),
-	{ok, #state{vm = VM, context = Ctx, debug = ets:new(erlv8_vm_debug,[]) }}.
+	{ok, #state{vm = VM, context = Ctx, debug = ets:new(erlv8_vm_debug,[]), ticked = ets:new(erlv8_vm_ticked,[]) }}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -205,7 +205,8 @@ handle_call({enqueue_tick, Tick}, From, State) ->
 
 handle_call({enqueue_tick, Tick, Ref}, From, #state{ vm = VM, ticked = Ticked } = State) ->
 	tack = erlv8_nif:tick(VM, Ref, Tick),
-	{noreply, State#state{ ticked = update_ticked(Ref, From, Tick, Ticked) }};
+	update_ticked(Ref, From, Tick, Ticked),
+	{noreply, State};
 
 handle_call({next_tick, Tick}, From, State) ->
 	Ref = make_ref(),
@@ -213,7 +214,8 @@ handle_call({next_tick, Tick}, From, State) ->
 
 handle_call({next_tick, Tick, Ref}, From, #state{ vm = VM, ticked = Ticked } = State) ->
 	tack = erlv8_nif:tick(VM, Ref, Tick),
-	{noreply, State#state{ ticked = update_ticked(Ref, From, Tick, Ticked) }};
+	update_ticked(Ref, From, Tick, Ticked),
+	{noreply, State };
 
 handle_call(_Request, _From, State) ->
 	{noreply, State}.
@@ -245,16 +247,6 @@ handle_cast(_Msg, State) ->
 %%                                   {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
-handle_info({retick, Ref}, #state{ ticked = Ticked } = State) ->
-	case proplists:get_value(Ref, Ticked) of
-		undefined ->
-			{noreply, State};
-		{From, Tick} ->
-			Self = self(),
-			spawn(fun() -> gen_server2:reply(From, next_tick(Self, Tick)) end),
-			{noreply, State}
-	end;
-
 %% Invocation
 handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref = Ref } = Invocation,Args}, #state{ ticked = Ticked } = State) when is_function(F), is_list(Args) ->
 	Self = self(),
@@ -274,27 +266,29 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 								  Result
 						  end
 				  end,
-				  case proplists:get_value(Ref, Ticked) of
-					  {From, {call, _, _, _}} ->
-						  gen_server2:reply(From, Result1);
-					  {From, {call, _, _}} ->
-						  gen_server2:reply(From, Result1);
-					  {From, {inst, _, _}} ->
-						  gen_server2:reply(From, Result1);
-%% FIXME: can't do this here, but may be it is time to convert ticked into ets?
-%%						  {noreply, State#state{ ticked = proplists:delete(Ref, Ticked) } }
+				  case ets:lookup(Ticked, Ref) of
+					  [{Ref, {From, {call, _, _, _}}}] ->
+						  gen_server2:reply(From, Result1),
+						  ets:delete(Ticked, Ref);
+					  [{Ref, {From, {call, _, _}}}] ->
+						  gen_server2:reply(From, Result1),
+						  ets:delete(Ticked, Ref);
+					  [{Ref, {From, {inst, _, _}}}] ->
+						  gen_server2:reply(From, Result1),
+						  ets:delete(Ticked, Ref);
 					  _ ->
 						  enqueue_tick(Self, {result, Ref, Result1})
 				  end
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
-	case proplists:get_value(Ref, Ticked) of
-		undefined ->
+	case ets:lookup(Ticked, Ref) of
+		[] ->
 			{noreply, State};
-		{From, _Tick} ->
+		[{Ref, {From, _Tick}}] ->
 			gen_server2:reply(From, Result),
-			{noreply, State#state{ ticked = proplists:delete(Ref, Ticked) } }
+			ets:delete(Ticked, Ref),
+			{noreply, State}
 	end;
 
 handle_info({'DEBUG',Name,Payload}, #state{ debug = Debug } = State) ->
@@ -345,6 +339,6 @@ update_ticked(_Ref, From, {result, _, _}, Ticked) -> %% do not insert results, n
 	gen_server2:reply(From, ok),
 	Ticked;
 update_ticked(Ref, From, Tick, Ticked) ->
-	[{Ref,{From,Tick}}|Ticked].
+	ets:insert(Ticked, {Ref, {From, Tick}}).
 
 
