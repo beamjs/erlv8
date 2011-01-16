@@ -17,7 +17,6 @@
 
 -record(state, {
 		  vm,
-		  mods = [],
 		  ticked,
 		  storage = [],
 		  context,
