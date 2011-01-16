@@ -1,6 +1,6 @@
 X64=$(shell file -L `which epmd` | grep x86_64 | wc -l | xargs echo)
 X64L=$(shell file -L `which epmd` | grep x86-64 | wc -l | xargs echo)
-
+UNAME=$(shell uname)
 
 
 ifeq ($(X64),1)
@@ -12,6 +12,12 @@ endif
 ifeq ($(X64L),1)
 V8FLAGS=arch=x64
 V8ENV=CCFLAGS=-fPIC
+endif
+
+ifeq ($(ONAME),"Linux")
+ZMQ_FLAGS=--with-pic
+else
+ZMQ_FLAGS=
 endif
 
 
@@ -29,7 +35,7 @@ deps/v8/libv8.a: deps/v8/.git/config
 	@cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
 deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
-	@cd deps/zeromq2 && ./autogen.sh && ./configure && make
+	@cd deps/zeromq2 && ./autogen.sh && ./configure $(ZMQ_FLAGS) && make
 
 dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
 
