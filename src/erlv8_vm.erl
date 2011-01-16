@@ -145,7 +145,7 @@ init([VM]) ->
 	process_flag(trap_exit, true),
 	erlv8_nif:set_server(VM, self()),
 	Ctx = erlv8_nif:context(VM),
-	{ok, #state{vm = VM, context = Ctx, debug = ets:new(erlv8_vm_debug,[]), ticked = ets:new(erlv8_vm_ticked,[]) }}.
+	{ok, #state{vm = VM, context = Ctx, debug = ets:new(erlv8_vm_debug,[]), ticked = ets:new(erlv8_vm_ticked,[public]) }}.
 
 %%--------------------------------------------------------------------
 %% @private
