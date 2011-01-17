@@ -14,7 +14,7 @@ V8FLAGS=arch=x64
 V8ENV=CCFLAGS=-fPIC
 endif
 
-ifeq ($(ONAME),"Linux")
+ifeq ($(UNAME),"Linux")
 ZMQ_FLAGS=--with-pic
 else
 ZMQ_FLAGS=
