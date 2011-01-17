@@ -1,7 +1,6 @@
 X64=$(shell file -L `which epmd` | grep x86_64 | wc -l | xargs echo)
 X64L=$(shell file -L `which epmd` | grep x86-64 | wc -l | xargs echo)
-UNAME=$(shell uname)
-
+LINUX=$(shell uname | grep Linux | wc -l | xargs echo)
 
 ifeq ($(X64),1)
 V8FLAGS=arch=x64
@@ -14,7 +13,7 @@ V8FLAGS=arch=x64
 V8ENV=CCFLAGS=-fPIC
 endif
 
-ifeq ($(UNAME),"Linux")
+ifeq ($(LINUX),1)
 ZMQ_FLAGS=--with-pic
 else
 ZMQ_FLAGS=
