@@ -110,6 +110,7 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 }
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
+  v8::HandleScope handle_scope;
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   unsigned len;
   char name[MAX_ATOM_LEN];
@@ -132,21 +133,21 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	} else { // if it is not a special atom, convert it to a string
 	  result = v8::String::New(name);
 	}
-	return result;
+	return handle_scope.Close(result);
   } else if	(enif_get_int(env,term,&_int)) {
-	return v8::Local<v8::Integer>::New(v8::Integer::New(_int));
+	return handle_scope.Close(v8::Local<v8::Integer>::New(v8::Integer::New(_int)));
   } else if (enif_get_uint(env,term,&_uint)) {
-	return v8::Local<v8::Integer>::New(v8::Integer::NewFromUnsigned(_uint));
+	return handle_scope.Close(v8::Local<v8::Integer>::New(v8::Integer::NewFromUnsigned(_uint)));
   } else if (enif_get_long(env,term,&_long)) {
-	return v8::Local<v8::Number>::New(v8::Number::New(_long));
+	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_long)));
   } else if (enif_get_ulong(env,term,&_ulong)) {
-	return v8::Local<v8::Number>::New(v8::Number::New(_ulong));
+	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_ulong)));
   } else if (enif_get_int64(env,term,&_int64)) {
-	return v8::Local<v8::Number>::New(v8::Number::New(_int64));
+	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_int64)));
   } else if (enif_get_uint64(env,term,&_uint64)) {
-	return v8::Local<v8::Number>::New(v8::Number::New(_uint64));
+	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_uint64)));
   } else if (enif_get_double(env,term,&_double)) {
-	return v8::Local<v8::Number>::New(v8::Number::New(_double));
+	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_double)));
   } else if (enif_is_list(env,term)) { // string
 	unsigned len;
 	enif_get_list_length(env, term, &len);
@@ -154,7 +155,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	if (enif_get_string(env, term, str, len + 1, ERL_NIF_LATIN1)) {
 	  v8::Local<v8::String> s = v8::String::New((const char *)str);
 	  free(str);
-	  return s;
+	  return handle_scope.Close(s);
 	}
 	free(str);
   } else if (enif_is_tuple(env, term)) {
@@ -174,7 +175,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 	  if (isobj||isarray) {
 		if (enif_get_resource(env,array[1],val_resource,(void **)(&res))) {
-		  return res->val->ToObject();
+		  return handle_scope.Close(res->val->ToObject());
 		} else if (isobj && enif_is_proplist(env,array[1])) {
 		  v8::Local<v8::Object> obj = v8::Object::New();
 		  ERL_NIF_TERM head, tail;
@@ -188,7 +189,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 			current = tail;
 		  }
-		  return obj;
+		  return handle_scope.Close(obj);
 		} else if (isarray && enif_is_list(env, array[1])) {
 		  unsigned int i,alen;
 		  ERL_NIF_TERM head, tail;
@@ -204,13 +205,13 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 			current = tail;
 			i++;
 		  }
-		  return arrobj;
+		  return handle_scope.Close(arrobj);
 		}
 	  }
 
 	  if ((isv8fun) &&
 		  (enif_get_resource(env,array[1],val_resource,(void **)(&res)))){
-		return res->val;
+		return handle_scope.Close(res->val);
 	  } else if ((isv8fun) && (enif_is_fun(env, array[1]))) {
 		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env,array[1]));
 		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(env,array[2]));
@@ -222,7 +223,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		  f->Set(key,o->Get(key));
 		}
 	  
-	    return f;
+	    return handle_scope.Close(f);
 
 	  }
 	  
@@ -256,7 +257,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  f->SetHiddenValue(v8::String::New("__erlv8__"), external);
 	  
 	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate> >(external_to_term(external), t)); // cache it
-	  return f;
+	  return handle_scope.Close(f);
 	}
   } else if (enif_is_pid(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
