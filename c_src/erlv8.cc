@@ -161,6 +161,20 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 		  case RETURN:
 			enif_free_env(ref_env);
 			enif_clear_env(env);
+			zmq_msg_t tick_msg;
+			int e;
+
+			while (!pop_ticks.empty()) {
+			  Tick * newtick = pop_ticks.front();
+			  pop_ticks.pop();
+			  zmq_msg_init_data(&tick_msg, newtick, sizeof(Tick), free_tick, NULL);
+			  do {
+				e = zmq_send(ticker_push_socket, &tick_msg, ZMQ_NOBLOCK);
+			  } while (e == EAGAIN);
+			  zmq_msg_close(&tick_msg);
+			  
+			}
+
 			return result;
 			break;
 		  }
