@@ -36,29 +36,8 @@ VM::VM() {
   v8::Locker locker;
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
-};
+  v8::Context::Scope context_scope(context);
 
-VM::~VM() { 
-	context.Dispose();
-	external_proto_num.Dispose();
-	external_proto_atom.Dispose();
-	external_proto_bin.Dispose();
-	external_proto_ref.Dispose();
-	external_proto_fun.Dispose();
-	external_proto_port.Dispose();
-	external_proto_pid.Dispose();
-	external_proto_tuple.Dispose();
-	external_proto_list.Dispose();
-
-	enif_free_env(env);
-
-	zmq_close(push_socket);
-	zmq_close(ticker_push_socket);
-	zmq_close(pull_socket);
-};
-
-void VM::run() {
-  LHCS(context);
   context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(this));
 
   ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
@@ -93,6 +72,28 @@ void VM::run() {
   zmq_connect(pull_socket, socket_id);
   zmq_connect(pull_socket, ticker_socket_id);
 
+};
+
+VM::~VM() { 
+	context.Dispose();
+	external_proto_num.Dispose();
+	external_proto_atom.Dispose();
+	external_proto_bin.Dispose();
+	external_proto_ref.Dispose();
+	external_proto_fun.Dispose();
+	external_proto_port.Dispose();
+	external_proto_pid.Dispose();
+	external_proto_tuple.Dispose();
+	external_proto_list.Dispose();
+
+	enif_free_env(env);
+
+	zmq_close(push_socket);
+	zmq_close(ticker_push_socket);
+	zmq_close(pull_socket);
+};
+
+void VM::run() {
   ticker(0);
 };
 
