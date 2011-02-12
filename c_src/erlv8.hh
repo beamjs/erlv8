@@ -118,7 +118,7 @@ public:
 
 enum TickHandlerResolution { DONE, RETURN, NEXT };
 
-#define TickHandler(name) TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
+#define TickHandler(name) extern TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
 
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);
