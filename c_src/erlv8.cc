@@ -166,14 +166,16 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 			int e;
 
 			while (!pop_ticks.empty()) {
-			  Tick * newtick = pop_ticks.front();
+			  Tick newtick = pop_ticks.front();
 			  pop_ticks.pop();
-			  zmq_msg_init_data(&tick_msg, newtick, sizeof(Tick), free_tick, NULL);
+			  zmq_msg_init_size(&tick_msg, sizeof(Tick));
+              memcpy(zmq_msg_data(&tick_msg), &newtick, sizeof(Tick));
+
 			  do {
 				e = zmq_send(ticker_push_socket, &tick_msg, ZMQ_NOBLOCK);
 			  } while (e == EAGAIN);
+
 			  zmq_msg_close(&tick_msg);
-			  
 			}
 
 			return result;
@@ -243,13 +245,6 @@ static ERL_NIF_TERM context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
   return enif_make_badarg(env);
 };
 
-void free_tick(void * data, void * hint) {
-  Tick * tick = reinterpret_cast<Tick *>(data);
-	
-  enif_free_env(tick->env);
-  enif_free(tick);
-}
-
 static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   vm_res_t *res;
   int e;
@@ -258,15 +253,21 @@ static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
 	  return enif_make_badarg(env);
 
 	zmq_msg_t tick_msg;
-	Tick * tick = (Tick *) enif_alloc(sizeof(Tick));
-	tick->env = enif_alloc_env();
-	tick->tick = enif_make_copy(tick->env, argv[2]);
-	tick->ref = enif_make_copy(tick->env, argv[1]);
 
-	zmq_msg_init_data(&tick_msg, tick, sizeof(Tick), free_tick, NULL);
+	Tick tick;
+	tick.env = enif_alloc_env();
+	tick.tick = enif_make_copy(tick.env, argv[2]);
+	tick.ref = enif_make_copy(tick.env, argv[1]);
+
+
+    zmq_msg_init_size(&tick_msg, sizeof(Tick));
+
+    memcpy(zmq_msg_data(&tick_msg), &tick, sizeof(Tick));
+
 	do {
 	  e = zmq_send(res->vm->push_socket, &tick_msg, ZMQ_NOBLOCK);
 	} while (e == EAGAIN);
+
 	zmq_msg_close(&tick_msg);
 
 	return enif_make_atom(env,"tack");

@@ -100,7 +100,7 @@ public:
   void * ticker_push_socket;
   void * pull_socket;
 
-  queue<Tick *> pop_ticks;
+  queue<Tick> pop_ticks;
 
   ErlNifTid tid;
   
@@ -179,8 +179,6 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments);
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments);
 
 v8::Handle<v8::Object> extern_name_to_proto(VM * vm, char *name);
-
-void free_tick(void * data, void * hint);
 
 // Debugging
 

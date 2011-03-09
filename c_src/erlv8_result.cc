@@ -6,11 +6,11 @@ TickHandler(ResultTickHandler) {
 	result = term_to_js(vm->env,array[2]);
 	return RETURN;
   } else {
-   Tick * newtick = (Tick *) enif_alloc(sizeof(Tick));
+   Tick newtick;
    
-   newtick->env = enif_alloc_env();
-   newtick->tick = enif_make_copy(newtick->env, tick);
-   newtick->ref = enif_make_copy(newtick->env, tick_ref);
+   newtick.env = enif_alloc_env();
+   newtick.tick = enif_make_copy(newtick.env, tick);
+   newtick.ref = enif_make_copy(newtick.env, tick_ref);
    
    vm->pop_ticks.push(newtick);
 
