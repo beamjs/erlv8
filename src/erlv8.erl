@@ -411,7 +411,7 @@ to_detail_string_test() ->
 	?assertEqual("1",erlv8_vm:to_detail_string(VM,1)),
 	?assertEqual("1",erlv8_vm:to_detail_string(VM,"1")),
 	?assertEqual("true",erlv8_vm:to_detail_string(VM,true)),
-	?assertEqual("#<an Object>",erlv8_vm:to_detail_string(VM,?V8Obj([{a,1}]))),
+	?assertEqual("#<Object>",erlv8_vm:to_detail_string(VM,?V8Obj([{a,1}]))),
 	stop().
 
 proto_test() ->
