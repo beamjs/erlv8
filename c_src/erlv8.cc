@@ -384,6 +384,8 @@ void weak_accessor_data_cleaner(v8::Persistent<v8::Value> object, void * data) {
   if (object.IsNearDeath()) {
 	object->ToObject()->DeleteHiddenValue(v8::String::New("_getter"));
 	object->ToObject()->DeleteHiddenValue(v8::String::New("_setter"));
+        object.Dispose();
+        object.Clear();
   }
 }
 
