@@ -38,7 +38,7 @@ VM::VM() {
   context = v8::Context::New(NULL, global_template);
   v8::Context::Scope context_scope(context);
 
-  context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(this));
+  context->Global()->SetHiddenValue(string__erlv8__,v8::External::New(this));
 
   ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
   ptr->ctx = v8::Persistent<v8::Context>::New(context);
@@ -292,7 +292,7 @@ static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
 	LHCS(res->vm->context);
 	v8::Persistent<v8::Context> context = v8::Context::New(NULL, global_template);
-	context->Global()->SetHiddenValue(v8::String::New("__erlv8__"),v8::External::New(res->vm));
+	context->Global()->SetHiddenValue(string__erlv8__,v8::External::New(res->vm));
 
 	ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
 	ptr->ctx = v8::Persistent<v8::Context>::New(context);
@@ -503,7 +503,7 @@ static ErlNifFunc nif_funcs[] =
   {"value_taint",2, value_taint}
 };
 
-#define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(v8::String::New("__erlv8__")))->Value()
+#define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(string__erlv8__))->Value()
 
 
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {
@@ -643,6 +643,8 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 
   empty_constructor = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(EmptyFun));
 
+  string__erlv8__ = v8::Persistent<v8::String>::New(v8::String::New("__erlv8__"));
+
   int preemption = 100; // default value
   enif_get_int(env, load_info, &preemption);
   v8::Locker::StartPreemption(preemption);
@@ -671,6 +673,7 @@ int upgrade(ErlNifEnv* env, void** priv_data, void** old_priv_data, ERL_NIF_TERM
 v8::Persistent<v8::ObjectTemplate> global_template;
 v8::Persistent<v8::ObjectTemplate> external_template;
 v8::Persistent<v8::FunctionTemplate> empty_constructor;
+v8::Persistent<v8::String> string__erlv8__;
 
 ErlNifResourceType * ctx_resource;
 ErlNifResourceType * vm_resource;

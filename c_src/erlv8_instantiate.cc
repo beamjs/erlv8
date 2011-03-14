@@ -23,7 +23,7 @@ TickHandler(InstantiateTickHandler) {
 
 	v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(fun_res->val);
 
-	if (!*f->GetHiddenValue(v8::String::New("__erlv8__"))) { // js function
+	if (!*f->GetHiddenValue(string__erlv8__)) { // js function
 	  v8::TryCatch try_catch;
 	  v8::Local<v8::Value> inst_result = f->NewInstance(alen, args);
 	  if (inst_result.IsEmpty()) {

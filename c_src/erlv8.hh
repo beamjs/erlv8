@@ -64,12 +64,14 @@ struct cmp_erl_nif_term
 extern v8::Persistent<v8::ObjectTemplate> global_template;
 extern v8::Persistent<v8::ObjectTemplate> external_template;
 extern v8::Persistent<v8::FunctionTemplate> empty_constructor;
+extern v8::Persistent<v8::String> string__erlv8__;
 
 extern ErlNifResourceType * vm_resource;
 extern ErlNifResourceType * val_resource;
 extern ErlNifResourceType * ctx_resource;
 
 extern void *zmq_context;
+
 //
 
 struct Tick {

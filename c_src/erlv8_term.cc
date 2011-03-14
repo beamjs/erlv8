@@ -239,7 +239,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
 
   } else if (enif_is_fun(env, term)) {
-	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
 	map<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate>, cmp_erl_nif_term>::iterator iter = vm->fun_map.find(term);
 
 	if (iter != vm->fun_map.end()) {
@@ -249,16 +249,16 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  v8::Persistent<v8::FunctionTemplate> t = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(WrapFun,external));
 	  
 	  v8::Local<v8::Function> f = t->GetFunction();
-	  f->SetHiddenValue(v8::String::New("__erlv8__"), external);
+	  f->SetHiddenValue(string__erlv8__, external);
 	  
 	  vm->fun_map.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate> >(external_to_term(external), t)); // cache it
 	  return handle_scope.Close(f);
 	}
   } else if (enif_is_pid(env, term)) {
-	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
 	return externalize_term(vm->extern_map, vm->external_proto_pid, term);
   } else if (enif_is_ref(env, term)) {
-	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
 	return externalize_term(vm->extern_map, vm->external_proto_ref, term);
   }
 
@@ -282,7 +282,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	resource_term = enif_make_resource(env, ptr);
 	enif_release_resource(ptr);
 	
-	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
 
 	ERL_NIF_TERM term = enif_make_tuple3(env,enif_make_atom(env,"erlv8_fun"), 
 										 resource_term,
@@ -322,7 +322,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 	resource_term = enif_make_resource(env, ptr);
 	enif_release_resource(ptr);
 
-	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
 
 	ERL_NIF_TERM term = enif_make_tuple3(env,
 										 enif_make_atom(env, "erlv8_array"),
@@ -334,7 +334,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
   } else if (val->IsObject()) {
 	v8::Local<v8::Object> obj = val->ToObject();
 	  
-	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
+	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
 
 	if (obj->GetPrototype()->Equals(vm->external_proto_num) ||
 		obj->GetPrototype()->Equals(vm->external_proto_atom) ||
