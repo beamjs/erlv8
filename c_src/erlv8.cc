@@ -130,6 +130,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	  memcpy(&tick_s, zmq_msg_data(&msg), sizeof(Tick));
 	  tick = enif_make_copy(env, tick_s.tick);
 	  tick_ref = enif_make_copy(env, tick_s.ref);
+	  enif_free_env(tick_s.env);
 	  zmq_msg_close(&msg);
 	}
 
