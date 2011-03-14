@@ -661,6 +661,7 @@ void unload(ErlNifEnv *env, void* priv_data)
   global_template.Dispose();
   external_template.Dispose();
   empty_constructor.Dispose();
+  string__erlv8__.Dispose();
   zmq_term(zmq_context);
 };
 
