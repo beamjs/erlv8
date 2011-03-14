@@ -112,8 +112,10 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
   v8::HandleScope handle_scope;
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
+  ErlNifBinary string_binary;
   unsigned len;
   char name[MAX_ATOM_LEN];
+  
   if (enif_is_atom(env, term)) {
 	enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);
 	enif_get_atom(env, term, (char *) &name,len + 1, ERL_NIF_LATIN1);
@@ -148,16 +150,9 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_uint64)));
   } else if (enif_get_double(env,term,&_double)) {
 	return handle_scope.Close(v8::Local<v8::Number>::New(v8::Number::New(_double)));
-  } else if (enif_is_list(env,term)) { // string
-	unsigned len;
-	enif_get_list_length(env, term, &len);
-	char * str = (char *) malloc(len + 1);
-	if (enif_get_string(env, term, str, len + 1, ERL_NIF_LATIN1)) {
-	  v8::Local<v8::String> s = v8::String::New((const char *)str);
-	  free(str);
-	  return handle_scope.Close(s);
-	}
-	free(str);
+  } else if (enif_inspect_iolist_as_binary(env, term, &string_binary)) { // string
+    v8::Local<v8::String> s = v8::String::New((const char *)string_binary.data, string_binary.size);
+    return handle_scope.Close(s);
   } else if (enif_is_tuple(env, term)) {
 	ERL_NIF_TERM *array;
 	int arity;

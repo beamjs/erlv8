@@ -62,6 +62,27 @@ vm_set_global_test() ->
 	?assertEqual([{"a",1},{"b",2}],Global:proplist()),
 	stop().
 
+term_to_js_string_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Obj = erlv8_vm:taint(VM, "abc"),
+	?assertEqual("abc",Obj),
+	stop().
+
+term_to_js_binary_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Obj = erlv8_vm:taint(VM, <<"abc">>),
+	?assertEqual("abc",Obj),
+	stop().
+
+term_to_js_iolist_test() ->
+	start(),
+	{ok, VM} = erlv8_vm:start(),
+	Obj = erlv8_vm:taint(VM, [<<"abc">>,$d,"ef"]),
+	?assertEqual("abcdef",Obj),
+	stop().
+
 term_to_js_object_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
