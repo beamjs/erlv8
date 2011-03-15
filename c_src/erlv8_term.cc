@@ -67,8 +67,8 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
 	term_ref_t * term_ref = (term_ref_t *) v8::External::Unwrap(v8::Handle<v8::External>::Cast(object));
 	enif_free_env(term_ref->env);
 	enif_free(term_ref);
-        object.Dispose();
-        object.Clear();
+    object.Dispose();
+    object.Clear();
 	v8::V8::AdjustAmountOfExternalAllocatedMemory(-(long)sizeof(term_ref_t));
   }
 }
@@ -76,8 +76,8 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
 void weak_external_obj_cleaner(v8::Persistent<v8::Value> object, void * data) {
   if (object.IsNearDeath()) {
 	object->ToObject()->SetInternalField(0,v8::Undefined());
-        object.Dispose();
-        object.Clear();
+    object.Dispose();
+    object.Clear();
   }
 }
 
