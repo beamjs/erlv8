@@ -108,7 +108,7 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
 	  obj->SetPrototype(proto);
 	  obj->SetInternalField(0, external);
-	  cache.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(external_to_term(external), obj)); // cache it
+	  cache.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(term, obj)); // cache it
 	  return obj;
 	}
 
