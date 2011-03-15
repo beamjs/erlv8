@@ -75,7 +75,8 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
 
 void weak_external_obj_cleaner(v8::Persistent<v8::Value> object, void * data) {
   if (object.IsNearDeath()) {
-	object->ToObject()->SetInternalField(0,v8::Undefined());
+    v8::Persistent<v8::Value>((object->ToObject()->GetInternalField(0))).Dispose();
+    object->ToObject()->SetInternalField(0,v8::Undefined());
     object.Dispose();
     object.Clear();
   }
