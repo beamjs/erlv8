@@ -601,7 +601,6 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
 
   external_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
-  external_template->SetInternalFieldCount(1);
 
   empty_constructor = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(EmptyFun));
 

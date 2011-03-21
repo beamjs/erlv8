@@ -75,7 +75,7 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
 
 void weak_external_obj_cleaner(v8::Persistent<v8::Value> object, void * data) {
   if (object.IsNearDeath()) {
-    object->ToObject()->SetInternalField(0,v8::Undefined());
+    object->ToObject()->DeleteHiddenValue(string__erlv8__);
     object.Dispose();
     object.Clear();
   }
@@ -106,7 +106,7 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
 	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
 	  obj->SetPrototype(proto);
-	  obj->SetInternalField(0, external);
+      obj->SetHiddenValue(string__erlv8__, external);
 	  cache.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(term, obj)); // cache it
 	  return obj;
 	}
@@ -349,7 +349,7 @@ ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
 		obj->GetPrototype()->Equals(vm->external_proto_pid) ||
 		obj->GetPrototype()->Equals(vm->external_proto_tuple) ||
 		obj->GetPrototype()->Equals(vm->external_proto_list)) {
-	  return enif_make_copy(env, external_to_term(v8::Handle<v8::External>::Cast(obj->GetInternalField(0))));
+	  return enif_make_copy(env, external_to_term(v8::Handle<v8::External>::Cast(obj->GetHiddenValue(string__erlv8__))));
 	} else {
 	  ERL_NIF_TERM resource_term;
 	  
