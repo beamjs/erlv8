@@ -73,14 +73,6 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
   }
 }
 
-void weak_external_obj_cleaner(v8::Persistent<v8::Value> object, void * data) {
-  if (object.IsNearDeath()) {
-    object->ToObject()->DeleteHiddenValue(string__erlv8__);
-    object.Dispose();
-    object.Clear();
-  }
-}
-
 inline v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term) {
   term_ref_t * term_ref = (term_ref_t *) enif_alloc(sizeof(term_ref_t));	
   term_ref->env = enif_alloc_env();										
@@ -97,19 +89,19 @@ inline ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val) {
 }
 
 v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term> cache, v8::Handle<v8::Object> proto, ERL_NIF_TERM term) {
-	map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = cache.find(term);
-
-	if (iter != cache.end()) {
-	  return iter->second; // it was cached before
-	} else {
-	  v8::Handle<v8::Value> external = term_to_external(term);
-	  v8::Persistent<v8::Object> obj = v8::Persistent<v8::Object>::New(external_template->NewInstance());
-	  obj.MakeWeak(NULL, weak_external_obj_cleaner);
-	  obj->SetPrototype(proto);
-      obj->SetHiddenValue(string__erlv8__, external);
-	  cache.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(term, obj)); // cache it
-	  return obj;
-	}
+  v8::HandleScope handle_scope;
+  map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = cache.find(term);
+  
+  if (iter != cache.end()) {
+    return iter->second; // it was cached before
+  } else {
+    v8::Handle<v8::Value> external = term_to_external(term);
+    v8::Handle<v8::Object> obj = external_template->NewInstance();
+    obj->SetPrototype(proto);
+    obj->SetHiddenValue(string__erlv8__, external);
+    cache.insert(std::pair<ERL_NIF_TERM, v8::Handle<v8::Object> >(term, obj)); // cache it
+    return handle_scope.Close(obj);
+  }
 
 }
 
@@ -260,10 +252,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	}
   } else if (enif_is_pid(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
-	return externalize_term(vm->extern_map, vm->external_proto_pid, term);
+	return handle_scope.Close(externalize_term(vm->extern_map, vm->external_proto_pid, term));
   } else if (enif_is_ref(env, term)) {
 	VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(string__erlv8__));
-	return externalize_term(vm->extern_map, vm->external_proto_ref, term);
+	return handle_scope.Close(externalize_term(vm->extern_map, vm->external_proto_ref, term));
   }
 
   return v8::Undefined(); // if nothing else works, return undefined
