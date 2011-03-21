@@ -87,10 +87,10 @@ taint(Server, Value) ->
     enqueue_tick(Server, {taint, Value}).
 
 equals(Server, V1, V2) ->
-	gen_server2:call(Server, {equals, V1, V2}).
+    enqueue_tick(Server, {equals, V1, V2}).
 
 strict_equals(Server, V1, V2) ->
-	gen_server2:call(Server, {strict_equals, V1, V2}).
+    enqueue_tick(Server, {strict_equals, V1, V2}).
 
 
 stor(Server, Key, Value) ->
@@ -172,12 +172,6 @@ handle_call({stor, Key, Value}, _From, #state{ storage = Storage } = State) ->
 
 handle_call({retr, Key}, _From, #state{ storage = Storage } = State) ->
 	{reply, proplists:get_value(Key, Storage), State};
-
-handle_call({equals, V1, V2}, _From, #state{ vm = VM } = State) ->
-	{reply, erlv8_nif:value_equals(VM,V1,V2), State};
-
-handle_call({strict_equals, V1, V2}, _From, #state{ vm = VM } = State) ->
-	{reply, erlv8_nif:value_strict_equals(VM,V1,V2), State};
 
 handle_call(context, _From, #state{} = State) ->
 	{reply, {self(), State#state.context}, State};

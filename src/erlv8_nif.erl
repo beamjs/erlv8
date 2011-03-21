@@ -1,10 +1,9 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([init/0,new_vm/0,set_server/2,global/1,context/1, new_context/1, tick/3,
+-export([init/0,new_vm/0,set_server/2,global/1,context/1, new_context/1, tick/3, 
 		 object_set_accessor/3, object_set_accessor/4,
-         object_set_accessor/5, object_set_accessor/6, object_set_accessor/7,
-		 value_equals/3, value_strict_equals/3]).
+         object_set_accessor/5, object_set_accessor/6, object_set_accessor/7]).
 
 -define(DEFAULT_PREEMPTION, 100).
 
@@ -61,11 +60,4 @@ object_set_accessor(_ObjectRes, _Name, _Getter, _Setter, _Data, _Setting) ->
 	error(not_loaded).
 
 object_set_accessor(_ObjectRes, _Name, _Getter, _Setter, _Data, _Setting, _Attribute) ->
-	error(not_loaded).
-
-
-value_equals(_VMRes, _Val1,_Val2) ->
-	error(not_loaded).
-
-value_strict_equals(_VMRes, _Val1,_Val2) ->
 	error(not_loaded).

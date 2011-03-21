@@ -128,6 +128,8 @@ TickHandler(CallTickHandler);
 TickHandler(InstantiateTickHandler);
 TickHandler(DeleteTickHandler);
 TickHandler(TaintTickHandler);
+TickHandler(EqualsTickHandler);
+TickHandler(StrictEqualsTickHandler);
 TickHandler(GetTickHandler);
 TickHandler(GetProtoTickHandler);
 TickHandler(GetHiddenTickHandler);
