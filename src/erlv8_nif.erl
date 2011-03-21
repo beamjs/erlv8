@@ -4,7 +4,7 @@
 -export([init/0,new_vm/0,set_server/2,global/1,context/1, new_context/1, tick/3,
 		 object_delete/2, object_set_accessor/3, object_set_accessor/4,
          object_set_accessor/5, object_set_accessor/6, object_set_accessor/7,
-		 value_equals/3, value_strict_equals/3, value_taint/2]).
+		 value_equals/3, value_strict_equals/3]).
 
 -define(DEFAULT_PREEMPTION, 100).
 
@@ -71,7 +71,4 @@ value_equals(_VMRes, _Val1,_Val2) ->
 	error(not_loaded).
 
 value_strict_equals(_VMRes, _Val1,_Val2) ->
-	error(not_loaded).
-
-value_taint(_VM, _Val) ->
 	error(not_loaded).

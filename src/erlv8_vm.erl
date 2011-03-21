@@ -84,7 +84,7 @@ next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
 	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
 
 taint(Server, Value) ->
-	gen_server2:call(Server, {taint, Value}).
+    enqueue_tick(Server, {taint, Value}).
 
 equals(Server, V1, V2) ->
 	gen_server2:call(Server, {equals, V1, V2}).
@@ -172,9 +172,6 @@ handle_call({stor, Key, Value}, _From, #state{ storage = Storage } = State) ->
 
 handle_call({retr, Key}, _From, #state{ storage = Storage } = State) ->
 	{reply, proplists:get_value(Key, Storage), State};
-
-handle_call({taint, Value}, _From, #state{ vm = VM } = State) ->
-	{reply, erlv8_nif:value_taint(VM,Value), State};
 
 handle_call({equals, V1, V2}, _From, #state{ vm = VM } = State) ->
 	{reply, erlv8_nif:value_equals(VM,V1,V2), State};
