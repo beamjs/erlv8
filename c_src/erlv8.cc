@@ -14,6 +14,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"call", CallTickHandler},
   {"inst", InstantiateTickHandler},
   {"delete", DeleteTickHandler},
+  {"taint", TaintTickHandler},
   {"get", GetTickHandler},
   {"get_proto", GetProtoTickHandler},
   {"get_hidden", GetHiddenTickHandler},
@@ -315,16 +316,6 @@ static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
-static ERL_NIF_TERM value_taint(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  vm_res_t *res;
-  if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
-	LHCS(res->vm->context);
-	return js_to_term(env,term_to_js(env,argv[1]));
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
 v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info); // fwd
 void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info); // fwd
 
@@ -445,8 +436,7 @@ static ErlNifFunc nif_funcs[] =
   {"object_set_accessor", 6, object_set_accessor},
   {"object_set_accessor", 7, object_set_accessor},
   {"value_equals",3, value_equals},
-  {"value_strict_equals",3, value_strict_equals},
-  {"value_taint",2, value_taint}
+  {"value_strict_equals",3, value_strict_equals}
 };
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(string__erlv8__))->Value()
