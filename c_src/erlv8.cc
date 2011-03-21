@@ -45,6 +45,7 @@ VM::VM() {
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
   v8::Context::Scope context_scope(context);
+  tid = enif_thread_self();
 
   context->Global()->SetHiddenValue(string__erlv8__,v8::External::New(this));
 
