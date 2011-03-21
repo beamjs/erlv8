@@ -2,7 +2,7 @@
 -on_load(init/0).
 
 -export([init/0,new_vm/0,set_server/2,global/1,context/1, new_context/1, tick/3,
-		 object_delete/2, object_set_accessor/3, object_set_accessor/4,
+		 object_set_accessor/3, object_set_accessor/4,
          object_set_accessor/5, object_set_accessor/6, object_set_accessor/7,
 		 value_equals/3, value_strict_equals/3, value_taint/2]).
 
@@ -46,9 +46,6 @@ global(_ContextObject) ->
 	error(not_loaded).
 
 tick(_VMObject, _Ref, _Tick) ->
-	error(not_loaded).
-
-object_delete(_ObjectRes, _Key) ->
 	error(not_loaded).
 
 object_set_accessor(_ObjectRes, _Name, _Getter) ->

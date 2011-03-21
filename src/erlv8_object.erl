@@ -57,7 +57,7 @@ get_prototype() ->
 	erlv8_vm:enqueue_tick(VM, {get_proto, Resource}).
 
 delete(Key) ->
-	erlv8_nif:object_delete(Resource,Key).
+	erlv8_vm:enqueue_tick(VM, {delete, Resource, Key}).
 
 set_accessor(Property, Getter) ->
 	erlv8_nif:object_set_accessor(Resource, Property, Getter).

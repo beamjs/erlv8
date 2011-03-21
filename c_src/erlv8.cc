@@ -13,6 +13,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"result", ResultTickHandler},
   {"call", CallTickHandler},
   {"inst", InstantiateTickHandler},
+  {"delete", DeleteTickHandler},
   {"get", GetTickHandler},
   {"get_proto", GetProtoTickHandler},
   {"get_hidden", GetHiddenTickHandler},
@@ -324,22 +325,6 @@ static ERL_NIF_TERM value_taint(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
-static ERL_NIF_TERM object_delete(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	v8::Handle<v8::Value> key = term_to_js(env,argv[1]);
-	if (key->IsString()) {
-	  res->val->ToObject()->Delete(key->ToString());
-	} else if (key->IsNumber()) {
-	  res->val->ToObject()->Delete(key->Uint32Value());
-	}
-	return enif_make_atom(env,"ok");
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
 v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info); // fwd
 void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info); // fwd
 
@@ -454,7 +439,6 @@ static ErlNifFunc nif_funcs[] =
   {"new_context", 1, new_context},
   {"global",1, global},
   {"tick",3, tick},
-  {"object_delete",2, object_delete},
   {"object_set_accessor", 3, object_set_accessor},
   {"object_set_accessor", 4, object_set_accessor},
   {"object_set_accessor", 5, object_set_accessor},
