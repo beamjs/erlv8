@@ -74,6 +74,7 @@ void weak_external_cleaner(v8::Persistent<v8::Value> object, void * data) {
 }
 
 inline v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term) {
+  v8::HandleScope handle_scope;
   term_ref_t * term_ref = (term_ref_t *) enif_alloc(sizeof(term_ref_t));	
   term_ref->env = enif_alloc_env();										
   term_ref->term = enif_make_copy(term_ref->env, term);
