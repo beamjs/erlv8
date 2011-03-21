@@ -14,7 +14,7 @@ set_value(Key,Value,PropertyAttribute) ->
 	erlv8_vm:enqueue_tick(VM, {set, Resource, Key, Value, PropertyAttribute}).
 
 set_hidden_value(Key,Value) ->
-	erlv8_nif:object_set_hidden(Resource, Key, Value).
+	erlv8_vm:enqueue_tick(VM, {set_hidden, Resource, Key, Value}).
 
 get_value(Key) ->
 	get_value(Key, undefined).

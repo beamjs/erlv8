@@ -18,6 +18,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"get_hidden", GetHiddenTickHandler},
   {"set", SetTickHandler},
   {"set_proto", SetProtoTickHandler},
+  {"set_hidden", SetHiddenTickHandler},
   {"proplist", ProplistTickHandler},
   {"list", ListTickHandler},
   {"script", ScriptTickHandler},
@@ -323,17 +324,6 @@ static ERL_NIF_TERM value_taint(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
-static ERL_NIF_TERM object_set_hidden(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	res->val->ToObject()->SetHiddenValue(term_to_js(env,argv[1])->ToString(),term_to_js(env,argv[2]));
-	return argv[2];
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
 static ERL_NIF_TERM object_delete(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
   if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
@@ -464,7 +454,6 @@ static ErlNifFunc nif_funcs[] =
   {"new_context", 1, new_context},
   {"global",1, global},
   {"tick",3, tick},
-  {"object_set_hidden",3, object_set_hidden},
   {"object_delete",2, object_delete},
   {"object_set_accessor", 3, object_set_accessor},
   {"object_set_accessor", 4, object_set_accessor},
