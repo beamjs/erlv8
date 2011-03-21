@@ -25,6 +25,25 @@ TickHandler(SetTickHandler) {
   return DONE;
 }
 
+TickHandler(SetProtoTickHandler) {
+  ErlNifEnv *ref_env = enif_alloc_env();
+  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
+  val_res_t *obj_res;
+  if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
+	LHCS(obj_res->ctx);
+
+	ERL_NIF_TERM result =  enif_make_atom(ref_env, obj_res->val->ToObject()->SetPrototype(term_to_js(ref_env,array[2])) ? "true" : "false");
+	
+	SEND(vm->server,
+		 enif_make_tuple3(env,
+						  enif_make_atom(env,"result"),
+						  enif_make_copy(env,set_ref),
+						  result));
+  } 
+  enif_free_env(ref_env);
+  return DONE;
+}
+
 TickHandler(SetInternalTickHandler) {
   ErlNifEnv *ref_env = enif_alloc_env();
   ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);

@@ -51,7 +51,7 @@ set_internal_field(Index, Value) ->
 	erlv8_vm:enqueue_tick(VM, {set_internal, Resource, Index, Value}).
 
 set_prototype(Proto) ->
-	erlv8_nif:object_set_proto(Resource, Proto).
+    erlv8_vm:enqueue_tick(VM, {set_proto, Resource, Proto}).
 
 get_prototype() ->
 	erlv8_nif:object_get_proto(Resource).
