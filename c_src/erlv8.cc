@@ -14,6 +14,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"call", CallTickHandler},
   {"inst", InstantiateTickHandler},
   {"get", GetTickHandler},
+  {"get_hidden", GetHiddenTickHandler},
   {"set", SetTickHandler},
   {"proplist", ProplistTickHandler},
   {"list", ListTickHandler},
@@ -331,16 +332,6 @@ static ERL_NIF_TERM object_set_hidden(ErlNifEnv *env, int argc, const ERL_NIF_TE
   };
 };
 
-static ERL_NIF_TERM object_get_hidden(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	return js_to_term(env, res->val->ToObject()->GetHiddenValue(term_to_js(env,argv[1])->ToString()));
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
 static ERL_NIF_TERM object_set_proto(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
   val_res_t *res;
   if ((enif_get_resource(env,argv[0],val_resource,(void **)(&res)))) {
@@ -492,7 +483,6 @@ static ErlNifFunc nif_funcs[] =
   {"global",1, global},
   {"tick",3, tick},
   {"object_set_hidden",3, object_set_hidden},
-  {"object_get_hidden",2, object_get_hidden},
   {"object_set_proto",2, object_set_proto},
   {"object_get_proto",1, object_get_proto},
   {"object_delete",2, object_delete},

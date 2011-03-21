@@ -31,7 +31,7 @@ get_hidden_value(Key) ->
 	get_hidden_value(Key, undefined).
 
 get_hidden_value(Key, Default) ->
-	case erlv8_nif:object_get_hidden(Resource, Key) of
+	case erlv8_vm:enqueue_tick(VM, {get_hidden, Resource, Key}) of
 		undefined ->
 			Default;
 		Val ->
