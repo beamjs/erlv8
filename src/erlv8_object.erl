@@ -54,7 +54,7 @@ set_prototype(Proto) ->
     erlv8_vm:enqueue_tick(VM, {set_proto, Resource, Proto}).
 
 get_prototype() ->
-	erlv8_nif:object_get_proto(Resource).
+	erlv8_vm:enqueue_tick(VM, {get_proto, Resource}).
 
 delete(Key) ->
 	erlv8_nif:object_delete(Resource,Key).

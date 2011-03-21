@@ -127,6 +127,7 @@ TickHandler(ResultTickHandler);
 TickHandler(CallTickHandler);
 TickHandler(InstantiateTickHandler);
 TickHandler(GetTickHandler);
+TickHandler(GetProtoTickHandler);
 TickHandler(GetHiddenTickHandler);
 TickHandler(SetTickHandler);
 TickHandler(SetProtoTickHandler);
