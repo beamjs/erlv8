@@ -107,8 +107,7 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 }
 
 v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ERL_NIF_TERM term) {
-  v8::HandleScope handle_scope;
-  v8::Context::Scope context_scope(ctx);
+  LHCS(ctx);
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   ErlNifBinary string_binary;
   unsigned len;
@@ -265,8 +264,7 @@ v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ER
 
 
 ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx, ErlNifEnv *env, v8::Handle<v8::Value> val) {
-  v8::HandleScope handle_scope;
-  v8::Context::Scope context_scope(ctx);
+  LHCS(ctx);
   if (val.IsEmpty()) {
 	return enif_make_atom(env,"undefined");
   } else if (val->IsFunction()) {  // the reason why this check is so high up here is because it is also an object, so it should be before any object.
