@@ -136,6 +136,7 @@ TickHandler(GetHiddenTickHandler);
 TickHandler(SetTickHandler);
 TickHandler(SetProtoTickHandler);
 TickHandler(SetHiddenTickHandler);
+TickHandler(SetAccessorTickHandler);
 TickHandler(ProplistTickHandler);
 TickHandler(ListTickHandler);
 TickHandler(ScriptTickHandler);

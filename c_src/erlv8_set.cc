@@ -104,3 +104,86 @@ TickHandler(SetInternalTickHandler) {
   enif_free_env(ref_env);
   return DONE;
 }
+
+v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info); // fwd
+void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info); // fwd
+
+void weak_accessor_data_cleaner(v8::Persistent<v8::Value> object, void * data) {
+  if (object.IsNearDeath()) {
+	object->ToObject()->DeleteHiddenValue(v8::String::New("_getter"));
+	object->ToObject()->DeleteHiddenValue(v8::String::New("_setter"));
+        object.Dispose();
+        object.Clear();
+  }
+}
+
+TickHandler(SetAccessorTickHandler) {
+  char aname[MAX_ATOM_LEN];
+  ErlNifEnv *ref_env = enif_alloc_env();
+  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
+  const char *atom_val;
+  val_res_t *obj_res;
+  if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
+	LHCS(obj_res->ctx);
+
+	if (arity > 3) {
+	  v8::Handle<v8::Value> name = term_to_js(vm->env,array[2]);
+	  if (!name->IsString()) {
+          goto badarg;
+      }
+	  v8::AccessorGetter getter = GetterFun;
+	  v8::AccessorSetter setter = 0;
+	  v8::Persistent<v8::Object> data = v8::Persistent<v8::Object>::New(v8::Object::New());
+	  data.MakeWeak(NULL,weak_accessor_data_cleaner); // so that we'll release externals when we're done
+
+	  if (term_to_js(vm->env,array[3])->IsUndefined()) {
+          goto badarg;
+	  } else {
+		data->SetHiddenValue(v8::String::New("_getter"), term_to_external(array[3]));
+	  }
+
+	  if (arity > 4) {
+		setter = SetterFun;
+		data->SetHiddenValue(v8::String::New("_setter"), term_to_external(array[4]));
+	  }
+
+	  v8::AccessControl access_control = v8::DEFAULT;
+   
+	  if (arity > 5 && enif_is_atom(vm->env, array[5])) {
+		unsigned len;
+		enif_get_atom_length(vm->env, array[5], &len, ERL_NIF_LATIN1);
+		enif_get_atom(vm->env,array[5], (char *) &aname,len + 1, ERL_NIF_LATIN1);
+		if (!strcmp(aname,"default")) {
+		  access_control = v8::DEFAULT;
+		} else if (!strcmp(aname,"all_can_read")) {
+		  access_control = v8::ALL_CAN_READ;
+		} else if (!strcmp(aname,"all_can_write")) {
+		  access_control = v8::ALL_CAN_WRITE;
+		} else if (!strcmp(aname,"prohibits_overwriting")) {
+		  access_control = v8::PROHIBITS_OVERWRITING;
+		}
+	  }
+
+	  v8::PropertyAttribute property_attribute = v8::None;
+   
+	  if (arity > 6) {
+		property_attribute = term_to_property_attribute(vm->env,array[6]);
+	  }
+
+      atom_val = obj_res->val->ToObject()->SetAccessor(name->ToString(), getter, setter, data,
+																   access_control, property_attribute) ? "true" : "false";
+      goto send;
+	}
+badarg:
+    atom_val = "badarg";
+send:
+	SEND(vm->server,
+		 enif_make_tuple3(env,
+						  enif_make_atom(env,"result"),
+						  enif_make_copy(env,set_ref),
+						  enif_make_atom(env, atom_val)));
+  } 
+  enif_free_env(ref_env);
+  return DONE;
+}
+
