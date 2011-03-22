@@ -1,9 +1,8 @@
 #include "erlv8.hh"
 
 TickHandler(SetTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
-  ERL_NIF_TERM value = enif_make_copy(ref_env, array[3]); // stashing it away since Set() might call an accessor, which might change vm->env
+  ErlNifEnv *tmp_env = enif_alloc_env();
+  ERL_NIF_TERM value = enif_make_copy(tmp_env, array[3]); // stashing it away since Set() might call an accessor, which might change vm->env
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
@@ -14,59 +13,51 @@ TickHandler(SetTickHandler) {
 	  property_attribute = term_to_property_attribute(vm->env,array[4]);
 	}
 	
-	obj_res->val->ToObject()->Set(term_to_js(vm->env,array[2]),term_to_js(ref_env,value), property_attribute);
+	obj_res->val->ToObject()->Set(term_to_js(vm->env,array[2]),term_to_js(vm->env,value), property_attribute);
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,set_ref),
+						  enif_make_copy(env,tick_ref),
 						  enif_make_copy(env,value)));
   } 
-  enif_free_env(ref_env);
+  enif_free_env(tmp_env);
   return DONE;
 }
 
 TickHandler(SetProtoTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
 
-	ERL_NIF_TERM result =  enif_make_atom(ref_env, obj_res->val->ToObject()->SetPrototype(term_to_js(ref_env,array[2])) ? "true" : "false");
+    const char *atom_val = obj_res->val->ToObject()->SetPrototype(term_to_js(vm->env,array[2])) ? "true" : "false";
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,set_ref),
-						  result));
+						  enif_make_copy(env,tick_ref),
+						  enif_make_atom(env,atom_val)));
   } 
-  enif_free_env(ref_env);
   return DONE;
 }
 
 TickHandler(SetHiddenTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
 
-	obj_res->val->ToObject()->SetHiddenValue(term_to_js(ref_env,array[2])->ToString(),term_to_js(ref_env,array[3]));
+	obj_res->val->ToObject()->SetHiddenValue(term_to_js(vm->env,array[2])->ToString(),term_to_js(vm->env,array[3]));
 
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,set_ref),
+						  enif_make_copy(env,tick_ref),
 						  enif_make_copy(env,array[2])));
   } 
-  enif_free_env(ref_env);
   return DONE;
 }
 
 TickHandler(SetInternalTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   char name[MAX_ATOM_LEN];
   unsigned len;
@@ -81,7 +72,7 @@ TickHandler(SetInternalTickHandler) {
 	  		SEND(vm->server,
 			 enif_make_tuple3(env,
 							  enif_make_atom(env,"result"),
-							  enif_make_copy(env,set_ref),
+							  enif_make_copy(env,tick_ref),
 							  enif_make_atom(env,"error")));
 	} else {
 
@@ -97,12 +88,10 @@ TickHandler(SetInternalTickHandler) {
 	  SEND(vm->server,
 		   enif_make_tuple3(env,
 							enif_make_atom(env,"result"),
-							enif_make_copy(env,set_ref),
+							enif_make_copy(env,tick_ref),
 						  enif_make_copy(env,array[3])));
 	} 
-	
   }
-  enif_free_env(ref_env);
   return DONE;
 }
 
@@ -120,8 +109,6 @@ void weak_accessor_data_cleaner(v8::Persistent<v8::Value> object, void * data) {
 
 TickHandler(SetAccessorTickHandler) {
   char aname[MAX_ATOM_LEN];
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM set_ref = enif_make_copy(ref_env, tick_ref);
   const char *atom_val;
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
@@ -181,10 +168,9 @@ send:
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,set_ref),
+						  enif_make_copy(env,tick_ref),
 						  enif_make_atom(env, atom_val)));
   } 
-  enif_free_env(ref_env);
   return DONE;
 }
 
