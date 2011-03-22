@@ -84,6 +84,7 @@ VM::VM() {
 };
 
 VM::~VM() { 
+    sleep(1); // FIXME: workaround that would allow stop tick send to complete
 	context.Dispose();
 	external_proto_num.Dispose();
 	external_proto_atom.Dispose();
