@@ -71,10 +71,10 @@ VM::VM() {
   pull_socket = zmq_socket(zmq_context, ZMQ_PULL);
 
   char socket_id[64];
-  sprintf(socket_id, "inproc://tick-publisher-%ld", (long int) tid);
+  sprintf(socket_id, "inproc://tick-publisher-%ld", (long int) this);
 
   char ticker_socket_id[64];
-  sprintf(ticker_socket_id, "inproc://tick-publisher-ticker-%ld", (long int) tid);
+  sprintf(ticker_socket_id, "inproc://tick-publisher-ticker-%ld", (long int) this);
 
   zmq_bind(push_socket, socket_id);
   zmq_bind(ticker_push_socket, ticker_socket_id);
