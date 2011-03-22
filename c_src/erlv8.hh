@@ -174,8 +174,8 @@ public:
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(string__erlv8__))->Value()
 
-v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term);
-ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val);
+v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ERL_NIF_TERM term);
+ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx, ErlNifEnv *env, v8::Handle<v8::Value> val);
 ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val);
 v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term);
 v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM term);
