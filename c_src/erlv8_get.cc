@@ -4,13 +4,13 @@ TickHandler(GetTickHandler) {
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
-	v8::Local<v8::Value> get_result = obj_res->val->ToObject()->Get(term_to_js(vm->env,array[2]));
+	v8::Local<v8::Value> get_result = obj_res->val->ToObject()->Get(term_to_js(obj_res->ctx,vm->env,array[2]));
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
 						  enif_make_copy(env,tick_ref),
-						  js_to_term(env,get_result)));
+						  js_to_term(obj_res->ctx,env,get_result)));
   }
   return DONE;
 }
@@ -25,7 +25,7 @@ TickHandler(GetProtoTickHandler) {
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
 						  enif_make_copy(env,tick_ref),
-						  js_to_term(env,get_result)));
+						  js_to_term(obj_res->ctx,env,get_result)));
   }
   return DONE;
 }
@@ -34,13 +34,13 @@ TickHandler(GetHiddenTickHandler) {
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
-	v8::Local<v8::Value> get_result = obj_res->val->ToObject()->GetHiddenValue(term_to_js(vm->env,array[2])->ToString());
+	v8::Local<v8::Value> get_result = obj_res->val->ToObject()->GetHiddenValue(term_to_js(obj_res->ctx,vm->env,array[2])->ToString());
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
 						  enif_make_copy(env,tick_ref),
-						  js_to_term(env,get_result)));
+						  js_to_term(obj_res->ctx,env,get_result)));
   }
   return DONE;
 }
@@ -74,7 +74,7 @@ TickHandler(GetInternalTickHandler) {
 			 enif_make_tuple3(env,
 							  enif_make_atom(env,"result"),
 							  enif_make_copy(env,tick_ref),
-							  js_to_term(env,get_result)));
+							  js_to_term(obj_res->ctx,env,get_result)));
 	  }
 	  
 	}

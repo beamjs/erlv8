@@ -13,7 +13,7 @@ TickHandler(EqualsTickHandler) {
     bres = res1->val->ToObject()->Equals(res2->val->ToObject());
   } else {
     LHCS(vm->context);
-    bres = term_to_js(vm->env,array[1])->Equals(term_to_js(vm->env,array[2]));
+    bres = term_to_js(res1->ctx,vm->env,array[1])->Equals(term_to_js(res2->ctx,vm->env,array[2]));
   };
 
   SEND(vm->server,
@@ -39,7 +39,7 @@ TickHandler(StrictEqualsTickHandler) {
     bres = res1->val->ToObject()->StrictEquals(res2->val->ToObject());
   } else {
     LHCS(vm->context);
-    bres = term_to_js(vm->env,array[1])->StrictEquals(term_to_js(vm->env,array[2]));
+    bres = term_to_js(res1->ctx,vm->env,array[1])->StrictEquals(term_to_js(res2->ctx,vm->env,array[2]));
   };
 
   SEND(vm->server,

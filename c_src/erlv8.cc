@@ -329,7 +329,7 @@ static ERL_NIF_TERM global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   if (enif_get_resource(env,argv[0],ctx_resource,(void **)(&res))) {
 	LHCS(res->ctx);
 	v8::Handle<v8::Object> global = res->ctx->Global();
-	return js_to_term(env,global);
+	return js_to_term(res->ctx,env,global);
   } else {
 	return enif_make_badarg(env);
   };
@@ -383,7 +383,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * arguments.Length());
   for (int i=0;i<arguments.Length();i++) {
-	arr[i] = js_to_term(vm->env,arguments[i]);
+	arr[i] = js_to_term(vm->context,vm->env,arguments[i]);
   }
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,arguments.Length());
   free(arr);
@@ -394,8 +394,8 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,arguments.IsConstructCall() ? "true" : "false"),
-										 js_to_term(env, arguments.Holder()),
-										 js_to_term(env, arguments.This()),
+										 js_to_term(vm->context, env, arguments.Holder()),
+										 js_to_term(vm->context, env, arguments.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
 										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))

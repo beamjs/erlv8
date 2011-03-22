@@ -106,8 +106,9 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 
 }
 
-v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
+v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ERL_NIF_TERM term) {
   v8::HandleScope handle_scope;
+  v8::Context::Scope context_scope(ctx);
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   ErlNifBinary string_binary;
   unsigned len;
@@ -176,8 +177,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		  ERL_NIF_TERM *arr;
 		  while (enif_get_list_cell(env, current, &head, &tail)) {
 			enif_get_tuple(env,head,&arity,(const ERL_NIF_TERM **)&arr);
-			obj->Set(term_to_js(env,arr[0]),
-					 term_to_js(env,arr[1]));
+			obj->Set(term_to_js(ctx,env,arr[0]),
+					 term_to_js(ctx,env,arr[1]));
 
 			current = tail;
 		  }
@@ -193,7 +194,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 		  i = 0;
 		  while (enif_get_list_cell(env, current, &head, &tail)) {
-			arrobj->Set(v8::Integer::New(i), term_to_js(env,head));
+			arrobj->Set(v8::Integer::New(i), term_to_js(ctx,env,head));
 			current = tail;
 			i++;
 		  }
@@ -205,8 +206,8 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 		  (enif_get_resource(env,array[1],val_resource,(void **)(&res)))){
 		return handle_scope.Close(res->val);
 	  } else if ((isv8fun) && (enif_is_fun(env, array[1]))) {
-		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(env,array[1]));
-		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(env,array[2]));
+		v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(term_to_js(ctx,env,array[1]));
+		v8::Handle<v8::Object> o = v8::Handle<v8::Object>::Cast(term_to_js(ctx,env,array[2]));
 		
 		v8::Local<v8::Array> keys = o->GetPropertyNames();
 
@@ -228,10 +229,10 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 	  int iserror = strcmp(name,"error")==0;
 	  int isthrow = strcmp(name,"throw")==0;
 	  if (iserror) {
-		return v8::Exception::Error(v8::Handle<v8::String>::Cast(term_to_js(env,array[1])));
+		return v8::Exception::Error(v8::Handle<v8::String>::Cast(term_to_js(ctx,env,array[1])));
 	  }
 	  if (isthrow) {
-		return v8::ThrowException(term_to_js(env, array[1]));
+		return v8::ThrowException(term_to_js(ctx,env, array[1]));
 	  }
 	}
 
@@ -263,8 +264,9 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 };
 
 
-ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
+ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx, ErlNifEnv *env, v8::Handle<v8::Value> val) {
   v8::HandleScope handle_scope;
+  v8::Context::Scope context_scope(ctx);
   if (val.IsEmpty()) {
 	return enif_make_atom(env,"undefined");
   } else if (val->IsFunction()) {  // the reason why this check is so high up here is because it is also an object, so it should be before any object.
