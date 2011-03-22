@@ -1,8 +1,6 @@
 #include "erlv8.hh"
 
 TickHandler(GetTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM get_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
@@ -11,16 +9,13 @@ TickHandler(GetTickHandler) {
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,get_ref),
+						  enif_make_copy(env,tick_ref),
 						  js_to_term(env,get_result)));
   }
-  enif_free_env(ref_env);
   return DONE;
 }
 
 TickHandler(GetProtoTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM get_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
@@ -29,16 +24,13 @@ TickHandler(GetProtoTickHandler) {
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,get_ref),
+						  enif_make_copy(env,tick_ref),
 						  js_to_term(env,get_result)));
   }
-  enif_free_env(ref_env);
   return DONE;
 }
 
 TickHandler(GetHiddenTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM get_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
@@ -47,16 +39,13 @@ TickHandler(GetHiddenTickHandler) {
 	SEND(vm->server,
 		 enif_make_tuple3(env,
 						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,get_ref),
+						  enif_make_copy(env,tick_ref),
 						  js_to_term(env,get_result)));
   }
-  enif_free_env(ref_env);
   return DONE;
 }
 
 TickHandler(GetInternalTickHandler) {
-  ErlNifEnv *ref_env = enif_alloc_env();
-  ERL_NIF_TERM get_ref = enif_make_copy(ref_env, tick_ref);
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
@@ -68,7 +57,7 @@ TickHandler(GetInternalTickHandler) {
 	  		SEND(vm->server,
 			 enif_make_tuple3(env,
 							  enif_make_atom(env,"result"),
-							  enif_make_copy(env,get_ref),
+							  enif_make_copy(env,tick_ref),
 							  enif_make_atom(env,"error")));
 	} else {
 	  
@@ -78,18 +67,17 @@ TickHandler(GetInternalTickHandler) {
 		SEND(vm->server,
 			 enif_make_tuple3(env,
 							  enif_make_atom(env,"result"),
-							  enif_make_copy(env,get_ref),
+							  enif_make_copy(env,tick_ref),
 							  external_to_term(get_result)));
 	  } else {
 		SEND(vm->server,
 			 enif_make_tuple3(env,
 							  enif_make_atom(env,"result"),
-							  enif_make_copy(env,get_ref),
+							  enif_make_copy(env,tick_ref),
 							  js_to_term(env,get_result)));
 	  }
 	  
 	}
   }
-  enif_free_env(ref_env);
   return DONE;
 }
