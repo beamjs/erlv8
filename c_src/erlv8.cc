@@ -23,6 +23,7 @@ static ErlV8TickHandler tick_handlers[] =
   {"set", SetTickHandler},
   {"set_proto", SetProtoTickHandler},
   {"set_hidden", SetHiddenTickHandler},
+  {"set_accessor", SetAccessorTickHandler},
   {"proplist", ProplistTickHandler},
   {"list", ListTickHandler},
   {"script", ScriptTickHandler},
@@ -320,79 +321,6 @@ static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
   };
 };
 
-v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info); // fwd
-void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info); // fwd
-
-void weak_accessor_data_cleaner(v8::Persistent<v8::Value> object, void * data) {
-  if (object.IsNearDeath()) {
-	object->ToObject()->DeleteHiddenValue(v8::String::New("_getter"));
-	object->ToObject()->DeleteHiddenValue(v8::String::New("_setter"));
-        object.Dispose();
-        object.Clear();
-  }
-}
-
-static ERL_NIF_TERM object_set_accessor(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
-  val_res_t *res;
-  char aname[MAX_ATOM_LEN];
-  if (enif_get_resource(env,argv[0],val_resource,(void **)(&res))) {
-	LHCS(res->ctx);
-	if (argc > 2) {
-	  v8::Handle<v8::Value> name = term_to_js(env,argv[1]);
-	  if (!name->IsString()) 
-		return enif_make_badarg(env);
-
-	  v8::AccessorGetter getter = GetterFun;
-	  v8::AccessorSetter setter = 0;
-	  v8::Persistent<v8::Object> data = v8::Persistent<v8::Object>::New(v8::Object::New());
-	  data.MakeWeak(NULL,weak_accessor_data_cleaner); // so that we'll release externals when we're done
-
-	  if (term_to_js(env,argv[2])->IsUndefined()) {
-		return enif_make_badarg(env);
-	  } else {
-		data->SetHiddenValue(v8::String::New("_getter"), term_to_external(argv[2]));
-	  }
-
-	  if (argc > 3) {
-		setter = SetterFun;
-		data->SetHiddenValue(v8::String::New("_setter"), term_to_external(argv[3]));
-	  }
-
-	  v8::AccessControl access_control = v8::DEFAULT;
-   
-	  if (argc > 4 && enif_is_atom(env, argv[4])) {
-		unsigned len;
-		enif_get_atom_length(env, argv[4], &len, ERL_NIF_LATIN1);
-		enif_get_atom(env,argv[4], (char *) &aname,len + 1, ERL_NIF_LATIN1);
-		if (!strcmp(aname,"default")) {
-		  access_control = v8::DEFAULT;
-		} else if (!strcmp(aname,"all_can_read")) {
-		  access_control = v8::ALL_CAN_READ;
-		} else if (!strcmp(aname,"all_can_write")) {
-		  access_control = v8::ALL_CAN_WRITE;
-		} else if (!strcmp(aname,"prohibits_overwriting")) {
-		  access_control = v8::PROHIBITS_OVERWRITING;
-		}
-	  }
-
-	  v8::PropertyAttribute property_attribute = v8::None;
-   
-	  if (argc > 5) {
-		property_attribute = term_to_property_attribute(env,argv[5]);
-	  }
-
-	  return enif_make_atom(env, res->val->ToObject()->SetAccessor(name->ToString(), getter, setter, data,
-																   access_control, property_attribute) ? "true" : "false");
-	} else {
-	  return enif_make_badarg(env);
-	}
-  } else {
-	return enif_make_badarg(env);
-  };
-};
-
-
-
 static ErlNifFunc nif_funcs[] =
 {
   {"new_vm", 0, new_vm},
@@ -401,15 +329,7 @@ static ErlNifFunc nif_funcs[] =
   {"new_context", 1, new_context},
   {"global",1, global},
   {"tick",3, tick},
-  {"object_set_accessor", 3, object_set_accessor},
-  {"object_set_accessor", 4, object_set_accessor},
-  {"object_set_accessor", 5, object_set_accessor},
-  {"object_set_accessor", 6, object_set_accessor},
-  {"object_set_accessor", 7, object_set_accessor}
 };
-
-#define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(string__erlv8__))->Value()
-
 
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
@@ -446,72 +366,6 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 						enif_make_copy(env,arglist)));
   return vm->ticker(ref);
 };
-
-v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
-
-  v8::Local<v8::Object> data = info.Data()->ToObject();
-  
-  // each call gets a unique ref
-  ERL_NIF_TERM ref = enif_make_ref(vm->env);
-
-  // prepare arguments
-  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * 1);
-  arr[0] = js_to_term(vm->env, property);
-  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,1);
-  free(arr);
-
-  // send invocation request
-  SEND(vm->server,
-	   enif_make_tuple3(env,
-						enif_make_copy(env,external_to_term(data->GetHiddenValue(v8::String::New("_getter")))),
-						enif_make_tuple7(env, 
-										 enif_make_atom(env,"erlv8_fun_invocation"),
-										 enif_make_atom(env,"false"),
-										 js_to_term(env, info.Holder()),
-										 js_to_term(env, info.This()),
-										 enif_make_copy(env, ref),
-										 enif_make_pid(env, vm->server),
-										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
-										 ),
-						enif_make_copy(env,arglist)));
-  return vm->ticker(ref);  
-}
-
-void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info) {
-  v8::HandleScope handle_scope;
-  VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
-
-  v8::Local<v8::Object> data = info.Data()->ToObject();
-
-  // each call gets a unique ref
-  ERL_NIF_TERM ref = enif_make_ref(vm->env);
-
-  // prepare arguments
-  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * 2);
-  arr[0] = js_to_term(vm->env, property);
-  arr[1] = js_to_term(vm->env, value);
-  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,2);
-  free(arr);
-
-  // send invocation request
-  SEND(vm->server,
-	   enif_make_tuple3(env,
-						enif_make_copy(env,external_to_term(data->GetHiddenValue(v8::String::New("_setter")))),
-						enif_make_tuple7(env, 
-										 enif_make_atom(env,"erlv8_fun_invocation"),
-										 enif_make_atom(env,"false"),
-										 js_to_term(env, info.Holder()),
-										 js_to_term(env, info.This()),
-										 enif_make_copy(env, ref),
-										 enif_make_pid(env, vm->server),
-										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
-										 ),
-						enif_make_copy(env,arglist)));
-  vm->ticker(ref);  
-}
-
 
 
 static void vm_resource_destroy(ErlNifEnv* env, void* obj) {

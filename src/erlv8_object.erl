@@ -60,17 +60,36 @@ delete(Key) ->
 	erlv8_vm:enqueue_tick(VM, {delete, Resource, Key}).
 
 set_accessor(Property, Getter) ->
-	erlv8_nif:object_set_accessor(Resource, Property, Getter).
+	case erlv8_vm:enqueue_tick(VM, {set_accessor, Resource, Property, Getter}) of
+        badarg ->
+            throw(badarg);
+        Result ->
+            Result
+    end.
 
 set_accessor(Property, Getter, Setter) ->
-	erlv8_nif:object_set_accessor(Resource, Property, Getter, Setter).
+	case erlv8_vm:enqueue_tick(VM, {set_accessor, Resource, Property, Getter, Setter}) of
+        badarg ->
+            throw(badarg);
+        Result ->
+            Result
+    end.
 
 set_accessor(Property, Getter, Setter, AccessControl) ->
-	erlv8_nif:object_set_accessor(Resource, Property, Getter, Setter, AccessControl).
+	case erlv8_vm:enqueue_tick(VM, {set_accessor, Resource, Property, Getter, Setter, AccessControl}) of
+        badarg ->
+            throw(badarg);
+        Result ->
+            Result
+    end.
 
 set_accessor(Property, Getter, Setter, AccessControl, PropertyAttribute) ->
-	erlv8_nif:object_set_accessor(Resource, Property, Getter, Setter, AccessControl, PropertyAttribute).
-
+	case erlv8_vm:enqueue_tick(VM, {set_accessor, Resource, Property, Getter, Setter, AccessControl, PropertyAttribute}) of
+        badarg ->
+            throw(badarg);
+        Result ->
+            Result
+    end.
 
 equals({_Tag,AnotherObject,_}) ->
 	erlv8_value:equals(VM, Resource, AnotherObject).

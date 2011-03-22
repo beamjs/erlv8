@@ -136,6 +136,7 @@ TickHandler(GetHiddenTickHandler);
 TickHandler(SetTickHandler);
 TickHandler(SetProtoTickHandler);
 TickHandler(SetHiddenTickHandler);
+TickHandler(SetAccessorTickHandler);
 TickHandler(ProplistTickHandler);
 TickHandler(ListTickHandler);
 TickHandler(ScriptTickHandler);
@@ -170,8 +171,7 @@ public:
 
 };
 
-
-
+#define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(string__erlv8__))->Value()
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term);
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val);
