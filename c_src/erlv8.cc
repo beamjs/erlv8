@@ -42,6 +42,7 @@ static ErlV8TickHandler tick_handlers[] =
 
 VM::VM() {
   env = enif_alloc_env();
+  mutex = enif_mutex_create((char*)"erlv8_vm_mutex");
   v8::Locker locker;
   v8::HandleScope handle_scope;
   context = v8::Context::New(NULL, global_template);
@@ -85,7 +86,7 @@ VM::VM() {
 };
 
 VM::~VM() { 
-    sleep(1); // FIXME: workaround that would allow stop tick send to complete
+    enif_mutex_destroy(mutex);
 	context.Dispose();
 	external_proto_num.Dispose();
 	external_proto_atom.Dispose();
@@ -205,6 +206,8 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 void * start_vm(void *data) {
   VM *vm = reinterpret_cast<VM *>(data);
   vm->run();
+  enif_mutex_lock(vm->mutex);
+  enif_mutex_unlock(vm->mutex);
   delete vm;
   return NULL;
 };
@@ -255,6 +258,39 @@ static ERL_NIF_TERM context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
 	return term;
   };
   return enif_make_badarg(env);
+};
+
+static ERL_NIF_TERM stop(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
+  vm_res_t *res;
+  int e;
+  if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
+	if ((!enif_is_ref(env, argv[1])))
+	  return enif_make_badarg(env);
+
+	zmq_msg_t tick_msg;
+
+	Tick tick;
+	tick.env = enif_alloc_env();
+	tick.tick = enif_make_tuple1(tick.env, enif_make_atom(tick.env, "stop"));
+	tick.ref = enif_make_copy(tick.env, argv[1]);
+
+
+    zmq_msg_init_size(&tick_msg, sizeof(Tick));
+
+    memcpy(zmq_msg_data(&tick_msg), &tick, sizeof(Tick));
+
+    enif_mutex_lock(res->vm->mutex);
+	do {
+	  e = zmq_send(res->vm->push_socket, &tick_msg, ZMQ_NOBLOCK);
+	} while (e == EAGAIN);
+
+	zmq_msg_close(&tick_msg);
+    enif_mutex_unlock(res->vm->mutex);
+
+	return enif_make_atom(env,"ok");
+  } else {
+	return enif_make_badarg(env);
+  };
 };
 
 static ERL_NIF_TERM tick(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) {
@@ -329,6 +365,7 @@ static ErlNifFunc nif_funcs[] =
   {"new_context", 1, new_context},
   {"global",1, global},
   {"tick",3, tick},
+  {"stop",2, stop},
 };
 
 v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {

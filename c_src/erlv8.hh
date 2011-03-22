@@ -97,6 +97,7 @@ public:
 
   ErlNifPid *server;
   ErlNifEnv *env;
+  ErlNifMutex *mutex;
 
   void * push_socket;
   void * ticker_push_socket;

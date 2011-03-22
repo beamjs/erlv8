@@ -312,8 +312,7 @@ prioritise_info(_,_State) ->
 %% @end
 %%--------------------------------------------------------------------
 terminate(_Reason, #state{ vm = VM } = _State) ->
-	tack = erlv8_nif:tick(VM,make_ref(),{stop}),
-	ok.
+	ok = erlv8_nif:stop(VM,make_ref()).
 
 %%--------------------------------------------------------------------
 %% @private

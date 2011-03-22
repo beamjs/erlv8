@@ -1,7 +1,8 @@
 -module(erlv8_nif).
 -on_load(init/0).
 
--export([init/0, new_vm/0, set_server/2, global/1, context/1, new_context/1, tick/3]).
+-export([init/0, new_vm/0, set_server/2, global/1, context/1, new_context/1,
+         tick/3, stop/2]).
 
 -define(DEFAULT_PREEMPTION, 100).
 
@@ -43,5 +44,8 @@ global(_ContextObject) ->
 	error(not_loaded).
 
 tick(_VMObject, _Ref, _Tick) ->
+	error(not_loaded).
+
+stop(_VMObject, _Ref) ->
 	error(not_loaded).
 
