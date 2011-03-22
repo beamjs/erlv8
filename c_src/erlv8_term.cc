@@ -107,6 +107,7 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
 }
 
 v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
+  v8::Locker locker;
   v8::HandleScope handle_scope;
   int _int; unsigned int _uint; long _long; unsigned long _ulong; ErlNifSInt64 _int64; ErlNifUInt64 _uint64; double _double;
   ErlNifBinary string_binary;
@@ -264,6 +265,7 @@ v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term) {
 
 
 ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val) {
+  v8::Locker locker;
   v8::HandleScope handle_scope;
   if (val.IsEmpty()) {
 	return enif_make_atom(env,"undefined");
