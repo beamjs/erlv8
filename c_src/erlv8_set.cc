@@ -13,7 +13,7 @@ TickHandler(SetTickHandler) {
 	  property_attribute = term_to_property_attribute(vm->env,array[4]);
 	}
 	
-	obj_res->val->ToObject()->Set(term_to_js(vm->env,array[2]),term_to_js(vm->env,value), property_attribute);
+	obj_res->val->ToObject()->Set(term_to_js(vm->env,array[2]),term_to_js(tmp_env,value), property_attribute);
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
