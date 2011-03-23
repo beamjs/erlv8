@@ -106,6 +106,8 @@ VM::~VM() {
 };
 
 void VM::run() {
+  v8::Locker locker;
+  v8::HandleScope handle_scope; // the very top level handle scope
   ticker(0);
 };
 
@@ -130,8 +132,6 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   Tick tick_s;
   ERL_NIF_TERM tick, tick_ref;
   while (1) {
-    LHCS(context);
- 
 	{
 	  v8::Unlocker unlocker;
 	  zmq_msg_init (&msg);
@@ -163,6 +163,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
           TickHandlerResolution resolution = (tick_handlers[i].handler(this, name, tick, tick_ref, ref, arity, array));
+
 		  switch (resolution.type) {
 		  case DONE:
 			stop_flag = true;

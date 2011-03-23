@@ -6,7 +6,7 @@ TickHandler(ResultTickHandler) {
 
   if (((unsigned long) ref) &&
 	  (enif_is_identical(array[1],ref))) { // this is our result
-    result.value = term_to_js(vm->context,vm->env,array[2]);
+    result.value = handle_scope.Close(term_to_js(vm->context,vm->env,array[2]));
     result.type = RETURN;
 	return result;
   } else {
