@@ -94,7 +94,7 @@ v8::Handle<v8::Object> externalize_term(map<ERL_NIF_TERM, v8::Handle<v8::Object>
   map<ERL_NIF_TERM, v8::Handle<v8::Object>, cmp_erl_nif_term>::iterator iter = cache.find(term);
   
   if (iter != cache.end()) {
-    return iter->second; // it was cached before
+    return handle_scope.Close(iter->second); // it was cached before
   } else {
     v8::Handle<v8::Value> external = term_to_external(term);
     v8::Handle<v8::Object> obj = external_template->NewInstance();
@@ -240,7 +240,7 @@ v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ER
 	map<ERL_NIF_TERM, v8::Handle<v8::FunctionTemplate>, cmp_erl_nif_term>::iterator iter = vm->fun_map.find(term);
 
 	if (iter != vm->fun_map.end()) {
-	  return iter->second->GetFunction(); // it was cached before
+	  return handle_scope.Close(iter->second->GetFunction()); // it was cached before
 	} else {
 	  v8::Handle<v8::Value> external = term_to_external(term);
 	  v8::Persistent<v8::FunctionTemplate> t = v8::Persistent<v8::FunctionTemplate>::New(v8::FunctionTemplate::New(WrapFun,external));
