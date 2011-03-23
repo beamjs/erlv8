@@ -427,6 +427,11 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   ctx_resource = enif_open_resource_type(env, NULL, "erlv8_ctx_resource", ctx_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
 
   v8::V8::Initialize();
+  int preemption = 100; // default value
+  enif_get_int(env, load_info, &preemption);
+  v8::Locker locker;
+  v8::Locker::StartPreemption(preemption);
+
   v8::HandleScope handle_scope;
 
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
@@ -437,9 +442,6 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 
   string__erlv8__ = v8::Persistent<v8::String>::New(v8::String::New("__erlv8__"));
 
-  int preemption = 100; // default value
-  enif_get_int(env, load_info, &preemption);
-  //v8::Locker::StartPreemption(preemption);
 
   return 0;
 };
