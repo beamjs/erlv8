@@ -110,8 +110,7 @@ void VM::run() {
 };
 
 v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
-  v8::Locker locker;
-  v8::Context::Scope context_scope(context);
+  LHCS(context);
 
   char name[MAX_ATOM_LEN];
   unsigned len;
@@ -191,7 +190,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 			  zmq_msg_close(&tick_msg);
 			}
 
-			return result;
+			return handle_scope.Close(result);
 			break;
 		  }
 		}
@@ -401,7 +400,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  return vm->ticker(ref);
+  return handle_scope.Close(vm->ticker(ref));
 };
 
 
