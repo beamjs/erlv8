@@ -131,7 +131,6 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   ERL_NIF_TERM tick, tick_ref;
   while (1) {
     LHCS(context);
-    v8::Handle<v8::Value> result;
  
 	{
 	  v8::Unlocker unlocker;
