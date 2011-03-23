@@ -215,7 +215,7 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
 										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  return vm->ticker(ref);  
+  return handle_scope.Close(vm->ticker(ref));  
 }
 
 void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v8::AccessorInfo &info) {
