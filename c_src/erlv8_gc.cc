@@ -3,5 +3,7 @@
 TickHandler(GCTickHandler) {
   while (!v8::V8::IdleNotification()) 
 	;
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

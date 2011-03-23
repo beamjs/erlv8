@@ -17,6 +17,8 @@ TickHandler(DeleteTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  enif_make_atom(env, "ok")));
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 

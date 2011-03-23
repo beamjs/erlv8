@@ -23,7 +23,9 @@ TickHandler(EqualsTickHandler) {
                         enif_make_atom(env, bres ? "true" : "false")));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(StrictEqualsTickHandler) {
@@ -49,5 +51,7 @@ TickHandler(StrictEqualsTickHandler) {
                         enif_make_atom(env, bres ? "true" : "false")));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

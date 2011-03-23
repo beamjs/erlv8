@@ -22,7 +22,9 @@ TickHandler(SetTickHandler) {
 						  enif_make_copy(env,value)));
   } 
   enif_free_env(tmp_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(SetProtoTickHandler) {
@@ -38,7 +40,9 @@ TickHandler(SetProtoTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  enif_make_atom(env,atom_val)));
   } 
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(SetHiddenTickHandler) {
@@ -54,7 +58,9 @@ TickHandler(SetHiddenTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  enif_make_copy(env,array[2])));
   } 
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(SetInternalTickHandler) {
@@ -92,7 +98,9 @@ TickHandler(SetInternalTickHandler) {
 						  enif_make_copy(env,array[3])));
 	} 
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::AccessorInfo &info); // fwd
@@ -171,7 +179,9 @@ send:
 						  enif_make_copy(env,tick_ref),
 						  enif_make_atom(env, atom_val)));
   } 
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 

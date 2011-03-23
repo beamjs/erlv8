@@ -12,7 +12,9 @@ TickHandler(GetTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  js_to_term(obj_res->ctx,env,get_result)));
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(GetProtoTickHandler) {
@@ -27,7 +29,9 @@ TickHandler(GetProtoTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  js_to_term(obj_res->ctx,env,get_result)));
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(GetHiddenTickHandler) {
@@ -42,7 +46,9 @@ TickHandler(GetHiddenTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  js_to_term(obj_res->ctx,env,get_result)));
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(GetInternalTickHandler) {
@@ -79,5 +85,7 @@ TickHandler(GetInternalTickHandler) {
 	  
 	}
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

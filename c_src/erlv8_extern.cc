@@ -46,7 +46,9 @@ TickHandler(ExternProtoTickHandler) {
 						js_to_term(vm->context,env,proto)));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(ExternalizeTickHandler) {
@@ -81,5 +83,7 @@ TickHandler(ExternalizeTickHandler) {
 										 )));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

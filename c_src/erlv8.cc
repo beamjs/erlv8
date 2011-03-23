@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
+typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*);
 
 struct ErlV8TickHandler {
   const char * name;
@@ -111,7 +111,6 @@ void VM::run() {
 
 v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   LHCS(context);
-
   char name[MAX_ATOM_LEN];
   unsigned len;
 
@@ -130,10 +129,10 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   zmq_msg_t msg;
   Tick tick_s;
   ERL_NIF_TERM tick, tick_ref;
- 
   while (1) {
-	v8::HandleScope handle_scope;
-
+    LHCS(context);
+    v8::Handle<v8::Value> result;
+ 
 	{
 	  v8::Unlocker unlocker;
 	  zmq_msg_init (&msg);
@@ -158,14 +157,14 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	  enif_get_atom(env,array[0],(char *)&name,len + 1, ERL_NIF_LATIN1);
 	  
 	  // lookup the matrix
-	  v8::Handle<v8::Value> result;
 	  unsigned int i = 0;
 	  bool stop_flag = false;
 
 	  while (!stop_flag) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
-		  switch (tick_handlers[i].handler(this, name, tick, tick_ref, ref, arity, array, result)) {
+          TickHandlerResolution resolution = (tick_handlers[i].handler(this, name, tick, tick_ref, ref, arity, array));
+		  switch (resolution.type) {
 		  case DONE:
 			stop_flag = true;
 			break;
@@ -189,8 +188,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 
 			  zmq_msg_close(&tick_msg);
 			}
-
-			return handle_scope.Close(result);
+			return handle_scope.Close(resolution.value);
 			break;
 		  }
 		}
@@ -441,7 +439,7 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 
   int preemption = 100; // default value
   enif_get_int(env, load_info, &preemption);
-  v8::Locker::StartPreemption(preemption);
+  //v8::Locker::StartPreemption(preemption);
 
   return 0;
 };

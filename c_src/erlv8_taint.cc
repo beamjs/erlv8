@@ -12,5 +12,7 @@ TickHandler(TaintTickHandler) {
                         js_to_term(vm->context,env,term_to_js(vm->context,vm->env, array[1]))));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

@@ -51,5 +51,7 @@ TickHandler(ScriptTickHandler) {
   }
   enif_free_env(ref_env);
   free(buf);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

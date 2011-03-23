@@ -61,7 +61,9 @@ TickHandler(InstantiateTickHandler) {
 	args = NULL;
   }
   enif_free_env(ref_env);
-  return DONE;		
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8::Object> instance, v8::Handle<v8::Array> array) {
