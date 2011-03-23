@@ -1,6 +1,6 @@
 #include "erlv8.hh"
 
-typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*, v8::Handle<v8::Value>&);
+typedef TickHandlerResolution (*TickHandler)(VM *, char *, ERL_NIF_TERM, ERL_NIF_TERM, ERL_NIF_TERM, int, const ERL_NIF_TERM*);
 
 struct ErlV8TickHandler {
   const char * name;
@@ -106,13 +106,13 @@ VM::~VM() {
 };
 
 void VM::run() {
+  v8::Locker locker;
+  v8::HandleScope handle_scope; // the very top level handle scope
   ticker(0);
 };
 
 v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
-  v8::Locker locker;
-  v8::Context::Scope context_scope(context);
-
+  LHCS(context);
   char name[MAX_ATOM_LEN];
   unsigned len;
 
@@ -131,10 +131,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
   zmq_msg_t msg;
   Tick tick_s;
   ERL_NIF_TERM tick, tick_ref;
- 
   while (1) {
-	v8::HandleScope handle_scope;
-
 	{
 	  v8::Unlocker unlocker;
 	  zmq_msg_init (&msg);
@@ -159,14 +156,15 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 	  enif_get_atom(env,array[0],(char *)&name,len + 1, ERL_NIF_LATIN1);
 	  
 	  // lookup the matrix
-	  v8::Handle<v8::Value> result;
 	  unsigned int i = 0;
 	  bool stop_flag = false;
 
 	  while (!stop_flag) {
 		if ((!tick_handlers[i].name) ||
 			(!strcmp(name,tick_handlers[i].name))) { // handler has been located
-		  switch (tick_handlers[i].handler(this, name, tick, tick_ref, ref, arity, array, result)) {
+          TickHandlerResolution resolution = (tick_handlers[i].handler(this, name, tick, tick_ref, ref, arity, array));
+
+		  switch (resolution.type) {
 		  case DONE:
 			stop_flag = true;
 			break;
@@ -190,8 +188,7 @@ v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
 
 			  zmq_msg_close(&tick_msg);
 			}
-
-			return result;
+			return handle_scope.Close(resolution.value);
 			break;
 		  }
 		}
@@ -329,7 +326,7 @@ static ERL_NIF_TERM global(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[]) 
   if (enif_get_resource(env,argv[0],ctx_resource,(void **)(&res))) {
 	LHCS(res->ctx);
 	v8::Handle<v8::Object> global = res->ctx->Global();
-	return js_to_term(env,global);
+	return js_to_term(res->ctx,env,global);
   } else {
 	return enif_make_badarg(env);
   };
@@ -383,7 +380,7 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * arguments.Length());
   for (int i=0;i<arguments.Length();i++) {
-	arr[i] = js_to_term(vm->env,arguments[i]);
+	arr[i] = js_to_term(vm->context,vm->env,arguments[i]);
   }
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,arguments.Length());
   free(arr);
@@ -394,14 +391,14 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,arguments.IsConstructCall() ? "true" : "false"),
-										 js_to_term(env, arguments.Holder()),
-										 js_to_term(env, arguments.This()),
+										 js_to_term(vm->context, env, arguments.Holder()),
+										 js_to_term(vm->context, env, arguments.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
 										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
 										 ),
 						enif_make_copy(env,arglist)));
-  return vm->ticker(ref);
+  return handle_scope.Close(vm->ticker(ref));
 };
 
 
@@ -430,6 +427,11 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
   ctx_resource = enif_open_resource_type(env, NULL, "erlv8_ctx_resource", ctx_resource_destroy, (ErlNifResourceFlags) (ERL_NIF_RT_CREATE | ERL_NIF_RT_TAKEOVER), NULL);
 
   v8::V8::Initialize();
+  int preemption = 100; // default value
+  enif_get_int(env, load_info, &preemption);
+  v8::Locker locker;
+  v8::Locker::StartPreemption(preemption);
+
   v8::HandleScope handle_scope;
 
   global_template = v8::Persistent<v8::ObjectTemplate>::New(v8::ObjectTemplate::New());
@@ -440,9 +442,6 @@ int load(ErlNifEnv *env, void** priv_data, ERL_NIF_TERM load_info)
 
   string__erlv8__ = v8::Persistent<v8::String>::New(v8::String::New("__erlv8__"));
 
-  int preemption = 100; // default value
-  enif_get_int(env, load_info, &preemption);
-  v8::Locker::StartPreemption(preemption);
 
   return 0;
 };

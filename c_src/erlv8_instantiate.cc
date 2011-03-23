@@ -17,7 +17,7 @@ TickHandler(InstantiateTickHandler) {
 	args = new v8::Local<v8::Value>[alen];
 	int i = 0;
 	while (enif_get_list_cell(vm->env, current, &head, &tail)) {
-	  args[i] = v8::Local<v8::Value>::New(term_to_js(vm->env,head));
+	  args[i] = v8::Local<v8::Value>::New(term_to_js(fun_res->ctx,vm->env,head));
 	  i++; current = tail;
 	}
 
@@ -35,13 +35,13 @@ TickHandler(InstantiateTickHandler) {
 											   enif_make_atom(env,"throw"),
 											   enif_make_tuple2(env,
 																enif_make_atom(env,"error"),
-																js_to_term(env,try_catch.Exception())))));
+																js_to_term(fun_res->ctx,env,try_catch.Exception())))));
 	  } else {
 		SEND(vm->server,
 			 enif_make_tuple3(env,
 							  enif_make_atom(env,"result"),
 							  enif_make_copy(env,inst_ref),
-							  js_to_term(env,inst_result)));
+							  js_to_term(fun_res->ctx,env,inst_result)));
 	  }
 	} else { // native Erlang function
 	  v8::Local<v8::Array> array = v8::Array::New(alen);
@@ -61,7 +61,9 @@ TickHandler(InstantiateTickHandler) {
 	args = NULL;
   }
   enif_free_env(ref_env);
-  return DONE;		
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8::Object> instance, v8::Handle<v8::Array> array) {
@@ -73,7 +75,7 @@ void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8:
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
   for (unsigned int i=0;i<array->Length();i++) {
-	arr[i] = js_to_term(vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
+	arr[i] = js_to_term(vm->context,vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
   }
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,array->Length());
   free(arr);
@@ -84,8 +86,8 @@ void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8:
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env, "true"),
-										 js_to_term(env, instance), // FIXME: not quite sure it's right
-										 js_to_term(env, instance),
+										 js_to_term(vm->context,env, instance), // FIXME: not quite sure it's right
+										 js_to_term(vm->context,env, instance),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
 										 enif_make_resource(env, ptr)

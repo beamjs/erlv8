@@ -7,9 +7,11 @@ TickHandler(ToStringTickHandler) {
 	   enif_make_tuple3(env,
 						enif_make_atom(env,"result"),
 						enif_make_copy(env,to_string_ref),
-						js_to_term(env,term_to_js(vm->env,array[1])->ToString())));
+						js_to_term(vm->context,env,term_to_js(vm->context,vm->env,array[1])->ToString())));
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 };
 
 TickHandler(ToDetailStringTickHandler) {
@@ -19,8 +21,10 @@ TickHandler(ToDetailStringTickHandler) {
 	   enif_make_tuple3(env,
 						enif_make_atom(env,"result"),
 						enif_make_copy(env,to_string_ref),
-						js_to_term(env,term_to_js(vm->env,array[1])->ToDetailString())));
+						js_to_term(vm->context,env,term_to_js(vm->context,vm->env,array[1])->ToDetailString())));
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 };
 

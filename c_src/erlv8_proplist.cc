@@ -15,8 +15,8 @@ TickHandler(ProplistTickHandler) {
 	for (unsigned int i=0;i<keys->Length();i++) {
 	  v8::Handle<v8::Value> key = keys->Get(v8::Integer::New(i));
 	  arr[i] = enif_make_tuple2(vm->env,
-								js_to_term(vm->env,v8::Handle<v8::String>::Cast(key)),
-								js_to_term(vm->env,res->val->ToObject()->Get(key)));
+								js_to_term(res->ctx,vm->env,v8::Handle<v8::String>::Cast(key)),
+								js_to_term(res->ctx,vm->env,res->val->ToObject()->Get(key)));
 	}
 	ERL_NIF_TERM list = enif_make_list_from_array(vm->env,arr,keys->Length());
 	free(arr);
@@ -28,5 +28,7 @@ TickHandler(ProplistTickHandler) {
   }
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

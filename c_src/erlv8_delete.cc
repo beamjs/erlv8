@@ -4,7 +4,7 @@ TickHandler(DeleteTickHandler) {
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
 	LHCS(obj_res->ctx);
-	v8::Handle<v8::Value> key = term_to_js(vm->env,array[2]);
+	v8::Handle<v8::Value> key = term_to_js(obj_res->ctx,vm->env,array[2]);
 	if (key->IsString()) {
 	  obj_res->val->ToObject()->Delete(key->ToString());
 	} else if (key->IsNumber()) {
@@ -17,6 +17,8 @@ TickHandler(DeleteTickHandler) {
 						  enif_make_copy(env,tick_ref),
 						  enif_make_atom(env, "ok")));
   }
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 

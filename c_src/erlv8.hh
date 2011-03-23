@@ -119,9 +119,14 @@ public:
 
 };
 
-enum TickHandlerResolution { DONE, RETURN, NEXT };
+enum TickHandlerResolutionType { DONE, RETURN, NEXT };
 
-#define TickHandler(name) extern TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array, v8::Handle<v8::Value>& result)
+typedef struct {
+  v8::Handle<v8::Value> value;
+  TickHandlerResolutionType type;
+} TickHandlerResolution;
+
+#define TickHandler(name) extern TickHandlerResolution name(VM * vm, char * tick_name, ERL_NIF_TERM tick, ERL_NIF_TERM tick_ref, ERL_NIF_TERM ref, int arity, const ERL_NIF_TERM * array)
 
 TickHandler(StopTickHandler);
 TickHandler(ResultTickHandler);
@@ -174,8 +179,8 @@ public:
 
 #define __ERLV8__(O) v8::Local<v8::External>::Cast(O->GetHiddenValue(string__erlv8__))->Value()
 
-v8::Handle<v8::Value> term_to_js(ErlNifEnv *env, ERL_NIF_TERM term);
-ERL_NIF_TERM js_to_term(ErlNifEnv *env, v8::Handle<v8::Value> val);
+v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ERL_NIF_TERM term);
+ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx, ErlNifEnv *env, v8::Handle<v8::Value> val);
 ERL_NIF_TERM external_to_term(v8::Handle<v8::Value> val);
 v8::Handle<v8::Value> term_to_external(ERL_NIF_TERM term);
 v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM term);

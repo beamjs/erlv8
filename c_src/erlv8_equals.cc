@@ -13,7 +13,7 @@ TickHandler(EqualsTickHandler) {
     bres = res1->val->ToObject()->Equals(res2->val->ToObject());
   } else {
     LHCS(vm->context);
-    bres = term_to_js(vm->env,array[1])->Equals(term_to_js(vm->env,array[2]));
+    bres = term_to_js(vm->context,vm->env,array[1])->Equals(term_to_js(vm->context,vm->env,array[2]));
   };
 
   SEND(vm->server,
@@ -23,7 +23,9 @@ TickHandler(EqualsTickHandler) {
                         enif_make_atom(env, bres ? "true" : "false")));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
 
 TickHandler(StrictEqualsTickHandler) {
@@ -39,7 +41,7 @@ TickHandler(StrictEqualsTickHandler) {
     bres = res1->val->ToObject()->StrictEquals(res2->val->ToObject());
   } else {
     LHCS(vm->context);
-    bres = term_to_js(vm->env,array[1])->StrictEquals(term_to_js(vm->env,array[2]));
+    bres = term_to_js(vm->context,vm->env,array[1])->StrictEquals(term_to_js(vm->context,vm->env,array[2]));
   };
 
   SEND(vm->server,
@@ -49,5 +51,7 @@ TickHandler(StrictEqualsTickHandler) {
                         enif_make_atom(env, bres ? "true" : "false")));
 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }

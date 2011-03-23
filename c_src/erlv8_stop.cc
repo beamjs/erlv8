@@ -1,6 +1,9 @@
 #include "erlv8.hh"
 
 TickHandler(StopTickHandler) {
-  result = v8::Undefined();
-  return RETURN;
+  v8::HandleScope handle_scope;
+  TickHandlerResolution result;
+  result.value = v8::Undefined();
+  result.type = RETURN;
+  return result;
 }

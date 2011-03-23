@@ -16,5 +16,7 @@ TickHandler(InternalCountTickHandler) {
 							enif_make_int(env, ifc)));
   } 
   enif_free_env(ref_env);
-  return DONE;
+  TickHandlerResolution result;
+  result.type = DONE;
+  return result;
 }
