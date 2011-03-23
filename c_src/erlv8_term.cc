@@ -228,7 +228,7 @@ v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx, ErlNifEnv *env, ER
 	  int iserror = strcmp(name,"error")==0;
 	  int isthrow = strcmp(name,"throw")==0;
 	  if (iserror) {
-		return v8::Exception::Error(v8::Handle<v8::String>::Cast(term_to_js(ctx,env,array[1])));
+		return handle_scope.Close(v8::Exception::Error(v8::Handle<v8::String>::Cast(term_to_js(ctx,env,array[1]))));
 	  }
 	  if (isthrow) {
 		return v8::ThrowException(term_to_js(ctx,env, array[1]));
