@@ -406,12 +406,14 @@ static void vm_resource_destroy(ErlNifEnv* env, void* obj) {
 };
 
 static void val_resource_destroy(ErlNifEnv* env, void* obj) {
+  v8::Locker locker;
   val_res_t * res = reinterpret_cast<val_res_t *>(obj);
   res->ctx.Dispose();
   res->val.Dispose();
 };
 
 static void ctx_resource_destroy(ErlNifEnv* env, void* obj) {
+  v8::Locker locker;
   ctx_res_t * res = reinterpret_cast<ctx_res_t *>(obj);
   res->ctx.Dispose();
 };
