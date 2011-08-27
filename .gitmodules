@@ -4,4 +4,4 @@
         branch = trunk
 [submodule "deps/zeromq2"]
 	path = deps/zeromq2
-	url = git://github.com/beamjs/zeromq2.git
+	url = git://github.com/zeromq/zeromq2-2.git
