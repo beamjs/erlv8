@@ -296,7 +296,10 @@ ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx, ErlNifEnv *env, v8::Handle<
   } else if (val->IsFalse()) {
 	return enif_make_atom(env,"false");
   } else if (val->IsString()) {
-    return enif_make_string(env,*v8::String::AsciiValue(val->ToString()),ERL_NIF_LATIN1);
+    ErlNifBinary result_binary = {0};
+    enif_alloc_binary(v8::String::Utf8Value(val->ToString()).length(), &result_binary);
+    (void)memcpy(result_binary.data, *v8::String::Utf8Value(val->ToString()), result_binary.size);
+    return enif_make_binary(env, &result_binary);
   } else if (val->IsInt32()) {
 	return enif_make_long(env,val->ToInt32()->Value());
   } else if (val->IsUint32()) {
