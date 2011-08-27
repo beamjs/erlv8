@@ -43,8 +43,6 @@ test: compile
 
 compile: dependencies
 	@EXTRA_CFLAGS= ./rebar compile
-	@cat ebin/erlv8.app | sed s/%sha%/`git log -1 --pretty=format:%h`/ > ebin/erlv8.app
 
 debug: dependencies
 	@EXTRA_CFLAGS=-DERLV8_DEBUG ./rebar compile
-	@cat ebin/erlv8.app | sed s/%sha%/`git log -1 --pretty=format:%h`/ > ebin/erlv8.app
