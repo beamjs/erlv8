@@ -42,6 +42,7 @@ test: compile
 	@./rebar eunit skip_deps=true
 
 compile: dependencies
+	@./rebar get-deps
 	@EXTRA_CFLAGS= ./rebar compile
 
 debug: dependencies
