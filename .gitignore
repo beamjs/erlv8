@@ -3,3 +3,5 @@ ebin/*.beam
 priv/*.so
 c_src/*.o
 .eunit
+deps/proper
+deps/proper_stdlib

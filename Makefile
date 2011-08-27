@@ -39,7 +39,7 @@ deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
 dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
 
 test: compile
-	@./rebar eunit
+	@./rebar eunit skip_deps=true
 
 compile: dependencies
 	@EXTRA_CFLAGS= ./rebar compile
