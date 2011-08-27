@@ -1,6 +1,7 @@
 [submodule "deps/v8"]
 	path = deps/v8
-	url = git://github.com/beamjs/v8.git
+	url = git://github.com/v8/v8.git
+        branch = trunk
 [submodule "deps/zeromq2"]
 	path = deps/zeromq2
 	url = git://github.com/beamjs/zeromq2.git
