@@ -6,6 +6,8 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
   ERL_NIF_TERM current = term;
   int arity;
   ERL_NIF_TERM *array;
+  ErlNifBinary string_binary;
+
   if (!enif_is_list(env,term)) {
 	return 0;
   }
@@ -23,6 +25,9 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 	  }
 	  free(str);
 	} else if (!enif_is_atom(env, array[0])) {
+      if (enif_inspect_iolist_as_binary(env, array[0], &string_binary)) { // string
+        return 1;
+      } 
 	  return 0;
 	}
 
@@ -34,6 +39,7 @@ int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 v8::PropertyAttribute term_to_property_attribute(ErlNifEnv * env, ERL_NIF_TERM term) {
   unsigned len;
   char name[MAX_ATOM_LEN];
+
   if (enif_is_atom(env, term)) {
 	  v8::PropertyAttribute property_attribute;
 	  enif_get_atom_length(env, term, &len, ERL_NIF_LATIN1);

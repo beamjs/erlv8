@@ -86,8 +86,8 @@ term_to_js_iolist_test() ->
 term_to_js_object_test() ->
 	start(),
 	{ok, VM} = erlv8_vm:start(),
-	Obj = erlv8_vm:taint(VM,?V8Obj([{"a",1},{"b","c"}])),
-	?assertMatch([{<<"a">>,1},{<<"b">>,<<"c">>}],Obj:proplist()),
+	Obj = erlv8_vm:taint(VM,?V8Obj([{"a",1},{"b","c"},{<<"c">>,<<"d">>}])),
+	?assertMatch([{<<"a">>,1},{<<"b">>,<<"c">>},{<<"c">>,<<"d">>}],Obj:proplist()),
 	stop().
 
 term_to_js_boolean_test() ->
