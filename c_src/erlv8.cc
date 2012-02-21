@@ -104,30 +104,43 @@ VM::~VM() {
   enif_mutex_destroy(mutex);
   TRACE("(%p) VM::~VM - 2\n", isolate);
   TRACE("(%p) VM::~VM - 3\n", isolate);
-  //external_proto_bin.Dispose();
+   external_proto_bin.Dispose();
+  external_proto_bin.Clear();
   TRACE("(%p) VM::~VM - 4\n", isolate);
-  /*  external_proto_ref.Dispose();
+  external_proto_ref.Dispose();
+  external_proto_ref.Clear();
   external_proto_fun.Dispose();
+  external_proto_fun.Clear();
   external_proto_port.Dispose();
+  external_proto_port.Clear();
   external_proto_pid.Dispose();
-  external_proto_tuple.Dispose();
+  external_proto_pid.Dispose();
+  external_proto_tuple.Clear();
   external_proto_list.Dispose();
+  external_proto_list.Clear();
   TRACE("(%p) VM::~VM - 4\n", isolate);
   global_template.Dispose();
+  global_template.Clear();
   TRACE("(%p) VM::~VM - 5\n", isolate);
   external_template.Dispose();
+  external_template.Clear();
   TRACE("(%p) VM::~VM - 6\n", isolate);
   empty_constructor.Dispose();
+  empty_constructor.Clear();
   TRACE("(%p) VM::~VM - 7\n", isolate);
   string__erlv8__.Dispose();
+  string__erlv8__.Clear();
   TRACE("(%p) VM::~VM - 8\n", isolate);
   external_proto_num.Dispose();
+  external_proto_num.Clear();
   TRACE("(%p) VM::~VM - 9\n", isolate);
-  external_proto_atom.Dispose();*/
+  external_proto_atom.Dispose();
+  external_proto_atom.Clear();
   TRACE("(%p) VM::~VM - 10\n", isolate);
   enif_free_env(env);
   TRACE("(%p) VM::~VM - 11\n", isolate);
-  //context.Dispose();
+  context.Dispose();
+  context.Clear();
   while (v8::Isolate::GetCurrent() == isolate) {
     isolate->Exit();
   }
@@ -463,9 +476,6 @@ v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
-  {
-    LHCS(vm->isolate, vm->context);
-    
     // each call gets a unique ref
     ERL_NIF_TERM ref = enif_make_ref(vm->env);
     // prepare arguments
@@ -489,7 +499,6 @@ v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
 					   enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))),
 			  enif_make_copy(env,arglist)));
     return handle_scope.Close(vm->ticker(ref));
-  }
 };
 
 
