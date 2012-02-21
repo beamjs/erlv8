@@ -95,11 +95,16 @@ VM::VM() {
 };
 
 VM::~VM() { 
+  //  v8::Isolate::Scope iscope(isolate);
+  //  v8::Locker locker(isolate);
+  //  v8::HandleScope handle_scope;
+  isolate->Enter();
+
   TRACE("(%p) VM::~VM - 1\n", isolate);
   enif_mutex_destroy(mutex);
   TRACE("(%p) VM::~VM - 2\n", isolate);
   TRACE("(%p) VM::~VM - 3\n", isolate);
-  //  external_proto_bin.Dispose();
+  //external_proto_bin.Dispose();
   TRACE("(%p) VM::~VM - 4\n", isolate);
   /*  external_proto_ref.Dispose();
   external_proto_fun.Dispose();
@@ -122,14 +127,17 @@ VM::~VM() {
   TRACE("(%p) VM::~VM - 10\n", isolate);
   enif_free_env(env);
   TRACE("(%p) VM::~VM - 11\n", isolate);
-  //  context.Dispose();
-  zmq_close(push_socket);
-  zmq_close(ticker_push_socket);
-  zmq_close(pull_socket);
+  //context.Dispose();
   while (v8::Isolate::GetCurrent() == isolate) {
     isolate->Exit();
   }
+  // this should dispoe everything created in the isolate:
+  // http://markmail.org/message/mcn27ibuijhgkehl
   isolate->Dispose();  
+  
+  zmq_close(push_socket);
+  zmq_close(ticker_push_socket);
+  zmq_close(pull_socket);
 };
 
 void VM::run() {
@@ -455,30 +463,33 @@ v8::Handle<v8::Value> EmptyFun(const v8::Arguments &arguments) {
 v8::Handle<v8::Value> WrapFun(const v8::Arguments &arguments) {
   v8::HandleScope handle_scope;
   VM * vm = (VM *)__ERLV8__(v8::Context::GetCurrent()->Global());
-  
-  // each call gets a unique ref
-  ERL_NIF_TERM ref = enif_make_ref(vm->env);
-  // prepare arguments
-  ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * arguments.Length());
-  for (int i=0;i<arguments.Length();i++) {
-    arr[i] = js_to_term(vm->context, vm->isolate, vm->env,arguments[i]);
+  {
+    LHCS(vm->isolate, vm->context);
+    
+    // each call gets a unique ref
+    ERL_NIF_TERM ref = enif_make_ref(vm->env);
+    // prepare arguments
+    ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * arguments.Length());
+    for (int i=0;i<arguments.Length();i++) {
+      arr[i] = js_to_term(vm->context, vm->isolate, vm->env,arguments[i]);
+    }
+    ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,arguments.Length());
+    free(arr);
+    // send invocation request
+    SEND(vm->server,
+	 enif_make_tuple3(env,
+			  enif_make_copy(env,external_to_term(arguments.Data())),
+			  enif_make_tuple7(env, 
+					   enif_make_atom(env,"erlv8_fun_invocation"),
+					   enif_make_atom(env,arguments.IsConstructCall() ? "true" : "false"),
+					   js_to_term(vm->context, vm->isolate, env, arguments.Holder()),
+					   js_to_term(vm->context, vm->isolate, env, arguments.This()),
+					   enif_make_copy(env, ref),
+					   enif_make_pid(env, vm->server),
+					   enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))),
+			  enif_make_copy(env,arglist)));
+    return handle_scope.Close(vm->ticker(ref));
   }
-  ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,arguments.Length());
-  free(arr);
-  // send invocation request
-  SEND(vm->server,
-       enif_make_tuple3(env,
-			enif_make_copy(env,external_to_term(arguments.Data())),
-			enif_make_tuple7(env, 
-					 enif_make_atom(env,"erlv8_fun_invocation"),
-					 enif_make_atom(env,arguments.IsConstructCall() ? "true" : "false"),
-					 js_to_term(vm->context, vm->isolate, env, arguments.Holder()),
-					 js_to_term(vm->context, vm->isolate, env, arguments.This()),
-					 enif_make_copy(env, ref),
-					 enif_make_pid(env, vm->server),
-					 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))),
-			enif_make_copy(env,arglist)));
-  return handle_scope.Close(vm->ticker(ref));
 };
 
 
@@ -486,15 +497,15 @@ static void vm_resource_destroy(ErlNifEnv* env, void* obj) {
 };
 
 static void val_resource_destroy(ErlNifEnv* env, void* obj) {
-  v8::Locker locker;
-  val_res_t * res = reinterpret_cast<val_res_t *>(obj);
+  // v8::Locker locker;
+  //  val_res_t * res = reinterpret_cast<val_res_t *>(obj);
   // res->ctx.Dispose();
   // res->val.Dispose();
 };
 
 static void ctx_resource_destroy(ErlNifEnv* env, void* obj) {
-  v8::Locker locker;
-  ctx_res_t * res = reinterpret_cast<ctx_res_t *>(obj);
+  // v8::Locker locker;
+  // ctx_res_t * res = reinterpret_cast<ctx_res_t *>(obj);
   //res->ctx.Dispose();
 };
 
