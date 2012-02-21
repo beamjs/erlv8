@@ -104,7 +104,7 @@ VM::~VM() {
   enif_mutex_destroy(mutex);
   TRACE("(%p) VM::~VM - 2\n", isolate);
   TRACE("(%p) VM::~VM - 3\n", isolate);
-   external_proto_bin.Dispose();
+  external_proto_bin.Dispose();
   external_proto_bin.Clear();
   TRACE("(%p) VM::~VM - 4\n", isolate);
   external_proto_ref.Dispose();
@@ -163,7 +163,6 @@ void VM::run() {
 void VM::terminate() {
   TRACE("(%p) VM::terminate - 1\n", isolate);
   v8::V8::TerminateExecution(isolate);
-
 }
 
 v8::Handle<v8::Value> VM::ticker(ERL_NIF_TERM ref0) {
@@ -326,10 +325,9 @@ static ERL_NIF_TERM context(ErlNifEnv *env, int argc, const ERL_NIF_TERM argv[])
   vm_res_t *res;
   if (enif_get_resource(env,argv[0],vm_resource,(void **)(&res))) {
     LHCS(res->vm->isolate, res->vm->context);
-    
     ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
     ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-    
+
     ERL_NIF_TERM term = enif_make_resource(env, ptr);
     
     enif_release_resource(ptr);
@@ -443,7 +441,6 @@ static ERL_NIF_TERM new_context(ErlNifEnv *env, int argc, const ERL_NIF_TERM arg
     
     ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
     ptr->ctx = v8::Persistent<v8::Context>::New(context);
-    
     ERL_NIF_TERM resource_term = enif_make_resource(env, ptr);
     
     enif_release_resource(ptr);
@@ -506,16 +503,9 @@ static void vm_resource_destroy(ErlNifEnv* env, void* obj) {
 };
 
 static void val_resource_destroy(ErlNifEnv* env, void* obj) {
-  // v8::Locker locker;
-  //  val_res_t * res = reinterpret_cast<val_res_t *>(obj);
-  // res->ctx.Dispose();
-  // res->val.Dispose();
 };
 
 static void ctx_resource_destroy(ErlNifEnv* env, void* obj) {
-  // v8::Locker locker;
-  // ctx_res_t * res = reinterpret_cast<ctx_res_t *>(obj);
-  //res->ctx.Dispose();
 };
 
 

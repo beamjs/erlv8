@@ -71,7 +71,6 @@ void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8:
  
   ctx_res_t *ptr = (ctx_res_t *)enif_alloc_resource(ctx_resource, sizeof(ctx_res_t));
   ptr->ctx = v8::Persistent<v8::Context>::New(v8::Context::GetCurrent());
-
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
   for (unsigned int i=0;i<array->Length();i++) {

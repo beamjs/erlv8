@@ -50,7 +50,6 @@ typedef struct _ctx_res_t {
   v8::Persistent<v8::Context> ctx;
 } ctx_res_t;
 
-
 // Helpers
 #define LHCS(iso, ctx)					\
   TRACE("(%p) LHCS - 1\n", iso);			\
@@ -99,7 +98,6 @@ struct Tick {
 // VM
 class VM {
 public:
-
   v8::Persistent<v8::ObjectTemplate> global_template;
   v8::Persistent<v8::ObjectTemplate> external_template;
   v8::Persistent<v8::FunctionTemplate> empty_constructor;

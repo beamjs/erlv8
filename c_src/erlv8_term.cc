@@ -359,7 +359,6 @@ ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx,  v8::Isolate* isolate, ErlN
     enif_release_resource(ptr);
     
     VM * vm = (VM *) v8::External::Unwrap(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__")));
-    
     ERL_NIF_TERM term = enif_make_tuple3(env,
 					 enif_make_atom(env, "erlv8_array"),
 					 resource_term,
