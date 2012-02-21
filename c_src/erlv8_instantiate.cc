@@ -17,44 +17,44 @@ TickHandler(InstantiateTickHandler) {
 	args = new v8::Local<v8::Value>[alen];
 	int i = 0;
 	while (enif_get_list_cell(vm->env, current, &head, &tail)) {
-	  args[i] = v8::Local<v8::Value>::New(term_to_js(fun_res->ctx,vm->env,head));
+	  args[i] = v8::Local<v8::Value>::New(term_to_js(fun_res->ctx, vm->isolate, vm->env,head));
 	  i++; current = tail;
 	}
 
 	v8::Handle<v8::Function> f = v8::Handle<v8::Function>::Cast(fun_res->val);
 
-	if (!*f->GetHiddenValue(string__erlv8__)) { // js function
+	if (!*f->GetHiddenValue(vm->string__erlv8__)) { // js function
 	  v8::TryCatch try_catch;
 	  v8::Local<v8::Value> inst_result = f->NewInstance(alen, args);
 	  if (inst_result.IsEmpty()) {
-		SEND(vm->server,
-			 enif_make_tuple3(env,
-							  enif_make_atom(env,"result"),
-							  enif_make_copy(env,inst_ref),
-							  enif_make_tuple2(env,
-											   enif_make_atom(env,"throw"),
-											   enif_make_tuple2(env,
-																enif_make_atom(env,"error"),
-																js_to_term(fun_res->ctx,env,try_catch.Exception())))));
+	    SEND(vm->server,
+		 enif_make_tuple3(env,
+				  enif_make_atom(env,"result"),
+				  enif_make_copy(env,inst_ref),
+				  enif_make_tuple2(env,
+						   enif_make_atom(env,"throw"),
+						   enif_make_tuple2(env,
+								    enif_make_atom(env,"error"),
+								    js_to_term(fun_res->ctx,vm->isolate, env,try_catch.Exception())))));
 	  } else {
-		SEND(vm->server,
-			 enif_make_tuple3(env,
-							  enif_make_atom(env,"result"),
-							  enif_make_copy(env,inst_ref),
-							  js_to_term(fun_res->ctx,env,inst_result)));
+	    SEND(vm->server,
+		 enif_make_tuple3(env,
+				  enif_make_atom(env,"result"),
+				  enif_make_copy(env,inst_ref),
+				  js_to_term(fun_res->ctx,vm->isolate, env,inst_result)));
 	  }
 	} else { // native Erlang function
 	  v8::Local<v8::Array> array = v8::Array::New(alen);
-
+	  
 	  for (unsigned int i=0;i<alen;i++) {
-		array->Set(i,args[i]);
+	    array->Set(i,args[i]);
 	  }
-
+	  
 	  ErlangConstFun(vm,
-					 external_to_term(f->GetHiddenValue(v8::String::New("__erlv8__"))), 
-					 inst_ref,
-					 empty_constructor->GetFunction()->NewInstance(),
-					 array);
+			 external_to_term(f->GetHiddenValue(v8::String::New("__erlv8__"))), 
+			 inst_ref,
+			 vm->empty_constructor->GetFunction()->NewInstance(),
+			 array);
 	}
 	  
 	delete [] args;
@@ -75,24 +75,24 @@ void ErlangConstFun(VM * vm, ERL_NIF_TERM term, ERL_NIF_TERM ref, v8::Handle<v8:
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * array->Length());
   for (unsigned int i=0;i<array->Length();i++) {
-	arr[i] = js_to_term(vm->context,vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
+    arr[i] = js_to_term(vm->context,vm->isolate, vm->env,array->Get(v8::Integer::NewFromUnsigned(i)));
   }
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,array->Length());
   free(arr);
   // send invocation request
   SEND(vm->server,
-	   enif_make_tuple3(env,
-						enif_make_copy(env,term),
-						enif_make_tuple7(env, 
-										 enif_make_atom(env,"erlv8_fun_invocation"),
-										 enif_make_atom(env, "true"),
-										 js_to_term(vm->context,env, instance), // FIXME: not quite sure it's right
-										 js_to_term(vm->context,env, instance),
-										 enif_make_copy(env, ref),
-										 enif_make_pid(env, vm->server),
-										 enif_make_resource(env, ptr)
-										 ),
-						enif_make_copy(env,arglist)));
+       enif_make_tuple3(env,
+			enif_make_copy(env,term),
+			enif_make_tuple7(env, 
+					 enif_make_atom(env,"erlv8_fun_invocation"),
+					 enif_make_atom(env, "true"),
+					 js_to_term(vm->context, vm->isolate, env, instance), // FIXME: not quite sure it's right
+					 js_to_term(vm->context, vm->isolate, env, instance),
+					 enif_make_copy(env, ref),
+					 enif_make_pid(env, vm->server),
+					 enif_make_resource(env, ptr)
+					 ),
+			enif_make_copy(env,arglist)));
   enif_release_resource(ptr);
 };
 

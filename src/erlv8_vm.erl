@@ -7,7 +7,7 @@
 -export([start_link/1,start/0,vm_resource/1,run/2,run/3,run/4,global/1,stop/1,
 		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
 		 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
-		 stor/3, retr/2, gc/1]).
+		 stor/3, retr/2, gc/1, kill/1]).
 
 %% gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -16,12 +16,12 @@
 -define(SERVER, ?MODULE). 
 
 -record(state, {
-		  vm,
-		  ticked,
-		  storage = [],
-		  context,
-		  debug
-		 }).
+	  vm,
+	  ticked,
+	  storage = [],
+	  context,
+	  debug
+	 }).
 
 -define(Error(Msg), lists:flatten(io_lib:format("~s: ~p",[Msg,Trace]))).
 -define(ErrorVal(Msg), lists:flatten(io_lib:format("~s: ~p ~p",[Msg,Val,Trace]))).
@@ -102,8 +102,8 @@ retr(Server, Key) ->
 
 untaint({erlv8_object, _,_}=O) ->
 	{erlv8_object,lists:map(fun ({Key, Val}) ->
-									{Key, untaint(Val)}
-							end,O:proplist()), undefined};
+					{Key, untaint(Val)}
+				end,O:proplist()), undefined};
 untaint({erlv8_array, _,_}=O) ->
 	{erlv8_array,lists:map(fun untaint/1,O:list()), undefined};
 untaint({erlv8_fun, _,_}=F) -> %% broken
@@ -118,6 +118,10 @@ untaint(Other) ->
 gc(Server) ->
 	(catch enqueue_tick(Server, {gc}, 0)),
 	ok.
+
+kill(Server) ->
+    io:format("kill~n"),
+    gen_server2:call(Server, kill).
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -179,8 +183,8 @@ handle_call(context, _From, #state{} = State) ->
 handle_call(new_context, _From, #state{ vm = VM } = State) ->
 	{reply, {self(), erlv8_nif:new_context(VM)}, State};
 
-handle_call({global, Resource}, _From, #state{} = State) ->
-	{reply, erlv8_nif:global(Resource), State};
+handle_call({global, Resource}, _From, #state{vm = VM} = State) ->
+	{reply, erlv8_nif:global(VM, Resource), State};
 
 handle_call({to_string, Val}, _From, #state { vm = VM } = State) ->
 	Reply = erlv8_nif:to_string(VM, Val),
@@ -189,6 +193,11 @@ handle_call({to_string, Val}, _From, #state { vm = VM } = State) ->
 handle_call({to_detail_string, Val}, _From, #state { vm = VM } = State) ->
 	Reply = erlv8_nif:to_detail_string(VM, Val),
 	{reply, Reply, State};
+
+handle_call(kill, _From, #state { vm = VM } = State) ->
+    io:format("kill call~n"),
+    Reply = erlv8_nif:kill(VM),
+    {reply, Reply, State};
 
 handle_call(stop, _From, State) ->
 	{stop, normal, ok, State};
@@ -333,5 +342,3 @@ update_ticked(_Ref, From, {result, _, _}, Ticked) -> %% do not insert results, n
 	Ticked;
 update_ticked(Ref, From, Tick, Ticked) ->
 	ets:insert(Ticked, {Ref, {From, Tick}}).
-
-

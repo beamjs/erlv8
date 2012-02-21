@@ -41,9 +41,18 @@ dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
 test: compile
 	@./rebar eunit skip_deps=true
 
+dbg-test: compile
+	@USE_GDB=true ./rebar eunit skip_deps=true
+
 compile: dependencies
 	@./rebar get-deps
 	@EXTRA_CFLAGS= ./rebar compile
 
 debug: dependencies
-	@EXTRA_CFLAGS=-DERLV8_DEBUG ./rebar compile
+	@EXTRA_CFLAGS="-g3 -O0 -DERLV8_DEBUG" ./rebar compile
+
+clean: 
+	-rm c_src/*.o
+
+analyze:
+	clang --analyze -Xanalyzer "-Ideps/v8/include/" -Xanalyzer "-I/usr/local//Cellar/erlang/R15B/lib/erlang/usr/include"  -Xanalyzer "-Ideps/zeromq2/include/"  c_src/*.cc
