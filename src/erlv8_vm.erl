@@ -4,10 +4,13 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,start/0,vm_resource/1,run/2,run/3,run/4,global/1,stop/1,
-		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
-		 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
-		 stor/3, retr/2, gc/1, kill/1]).
+-export([start_link/1,start/0,vm_resource/1,
+	 run/2, run/3, run/4, 
+	 run_timed/3, run_timed/4, run_timed/5,
+	 global/1,stop/1,
+	 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
+	 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
+	 stor/3, retr/2, gc/1, kill/1]).
 
 %% gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -40,11 +43,33 @@ vm_resource(Server) ->
 run(Server, Source) ->
 	run(Server, erlv8_context:get(Server), Source).
 
+run_timed(Server, Source, Timeout) ->
+    run_timed(Server, erlv8_context:get(Server), Source, Timeout).
+
+run_timed(Server, {_, _CtxRes} = Context, Source, Timeout) ->
+    run_timed(Server, Context, Source, {"unknown",0,0}, Timeout).
+
+run_timed(Server, {C, CtxRes}, Source, {Name, LineOffset, ColumnOffset}, Timeout) ->
+    Pid = spawn_link(fun() ->
+			     receive {'$gen_call', From, run} ->
+				     Res = run(Server, {C , CtxRes}, Source, {Name, LineOffset, ColumnOffset}),
+				     gen_server:reply(From, Res)
+			     end
+		     end),
+    try gen_server:call(Pid, run, Timeout)
+    catch
+	exit:{timeout ,_} ->
+	    erlv8_vm:kill(Server),
+	    {error, timeout}
+    end.
+
+
 run(Server, {_, _CtxRes} = Context, Source) ->
 	run(Server, Context, Source, {"unknown",0,0}).
 
 run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
 	enqueue_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
+
 
 global(Server) ->
 	Ctx = erlv8_context:get(Server),
