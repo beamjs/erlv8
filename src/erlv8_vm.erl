@@ -120,8 +120,9 @@ gc(Server) ->
 	ok.
 
 kill(Server) ->
-    io:format("kill~n"),
-    gen_server2:call(Server, kill).
+    gen_server2:call(Server, kill),
+    erlv8_vm:run(Server, "1"), % hide returning {throw, null}.
+    ok.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -195,7 +196,6 @@ handle_call({to_detail_string, Val}, _From, #state { vm = VM } = State) ->
 	{reply, Reply, State};
 
 handle_call(kill, _From, #state { vm = VM } = State) ->
-    io:format("kill call~n"),
     Reply = erlv8_nif:kill(VM),
     {reply, Reply, State};
 
@@ -285,6 +285,7 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
+    
 	case ets:lookup(Ticked, Ref) of
 		[] ->
 			{noreply, State};
@@ -298,8 +299,11 @@ handle_info({'DEBUG',Name,Payload}, #state{ debug = Debug } = State) ->
 	ets:insert(Debug, {Name, Payload}),
 	{noreply, State};
 
+handle_info(timeout, State) ->
+    kill(self()),
+    {noreply, State};
 handle_info(_Info, State) ->
-	{noreply, State}.
+    {noreply, State}.
 
 prioritise_info({retick, _}, _State) ->
 	1;
