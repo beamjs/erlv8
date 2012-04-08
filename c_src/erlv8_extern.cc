@@ -41,9 +41,9 @@ TickHandler(ExternProtoTickHandler) {
 
   SEND(vm->server,
 	   enif_make_tuple3(env,
-						enif_make_atom(env,"result"),
-						enif_make_copy(env,extern_proto_ref),
-						js_to_term(vm->context,env,proto)));
+			    enif_make_atom(env,"result"),
+			    enif_make_copy(env,extern_proto_ref),
+			    js_to_term(vm->context, vm->isolate, env, proto)));
 
   enif_free_env(ref_env);
   TickHandlerResolution result;

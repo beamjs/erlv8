@@ -3,12 +3,12 @@
 TickHandler(ResultTickHandler) {
   v8::HandleScope handle_scope;
   TickHandlerResolution result;
-
+  
   if (((unsigned long) ref) &&
-	  (enif_is_identical(array[1],ref))) { // this is our result
-    result.value = handle_scope.Close(term_to_js(vm->context,vm->env,array[2]));
+      (enif_is_identical(array[1],ref))) { // this is our result
+    result.value = handle_scope.Close(term_to_js(vm->context, vm->isolate, vm->env,array[2]));
     result.type = RETURN;
-	return result;
+    return result;
   } else {
     Tick newtick;
     

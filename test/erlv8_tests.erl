@@ -85,7 +85,7 @@ statem() ->
 %%% generators
 js_string() ->
     oneof([list(proper_stdgen:utf8_char()),
-           proper_stdgen:binary_string(list(proper_stdgen:utf8_char()))]).
+           proper_stdgen:utf8_bin()]).
 
 %%% properties
 
@@ -94,8 +94,16 @@ prop_to_js_string() ->
     ?FORALL(String, js_string(),
                   begin
                       [{vm, VM}] = ets:lookup(?MODULE, vm),
-                      Obj = erlv8_vm:taint(VM, String),
-                      Obj =:= iolist_to_binary(String)
+		      Bin = unicode:characters_to_binary(String),
+                      Obj = erlv8_vm:taint(VM, Bin),
+		      case Obj =:= Bin of
+			  true ->
+			      ok;
+			  false ->
+			      io:format("->~p/~p~n", [Bin, Obj]),
+			      ok
+		      end,
+                      Obj =:= Bin
                   end).
                 
 

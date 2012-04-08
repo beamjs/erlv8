@@ -9,11 +9,11 @@ TickHandler(EqualsTickHandler) {
 
   if ((enif_get_resource(vm->env,array[1],val_resource,(void **)(&res1))) &&
 	  (enif_get_resource(vm->env,array[2],val_resource,(void **)(&res2)))) {
-	LHCS(res1->ctx);
+	LHCS(vm->isolate, res1->ctx);
     bres = res1->val->ToObject()->Equals(res2->val->ToObject());
   } else {
-    LHCS(vm->context);
-    bres = term_to_js(vm->context,vm->env,array[1])->Equals(term_to_js(vm->context,vm->env,array[2]));
+    LHCS(vm->isolate, vm->context);
+    bres = term_to_js(vm->context, vm->isolate, vm->env,array[1])->Equals(term_to_js(vm->context, vm->isolate, vm->env,array[2]));
   };
 
   SEND(vm->server,
@@ -37,11 +37,11 @@ TickHandler(StrictEqualsTickHandler) {
 
   if ((enif_get_resource(vm->env,array[1],val_resource,(void **)(&res1))) &&
 	  (enif_get_resource(vm->env,array[2],val_resource,(void **)(&res2)))) {
-	LHCS(res1->ctx);
+	LHCS(vm->isolate, res1->ctx);
     bres = res1->val->ToObject()->StrictEquals(res2->val->ToObject());
   } else {
-    LHCS(vm->context);
-    bres = term_to_js(vm->context,vm->env,array[1])->StrictEquals(term_to_js(vm->context,vm->env,array[2]));
+    LHCS(vm->isolate, vm->context);
+    bres = term_to_js(vm->context, vm->isolate, vm->env,array[1])->StrictEquals(term_to_js(vm->context, vm->isolate, vm->env,array[2]));
   };
 
   SEND(vm->server,

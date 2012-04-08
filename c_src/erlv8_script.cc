@@ -7,47 +7,66 @@ TickHandler(ScriptTickHandler) {
   enif_get_list_length(vm->env, array[2], &len);
   char * buf = (char *) malloc(len + 1);
   enif_get_string(vm->env,array[2],buf,len + 1, ERL_NIF_LATIN1);
-
+  
   ctx_res_t *res;
   if (enif_get_resource(vm->env,array[1],ctx_resource,(void **)(&res))) {
-	v8::Context::Scope context_scope(res->ctx);
-	
+    TRACE("(%p) script - 1\n", vm->isolate);
+    v8::Isolate::Scope iscope(vm->isolate);
+    TRACE("(%p) script - 2\n", vm->isolate);
+    v8::Context::Scope context_scope(res->ctx);
+    TRACE("(%p) script - 3\n", vm->isolate);
+    v8::HandleScope handle_scope;
+    TRACE("(%p) script - 4\n", vm->isolate);
+    
 
-	v8::TryCatch try_catch;
-	
-	v8::ScriptOrigin * origin = new v8::ScriptOrigin(term_to_js(res->ctx,vm->env,array[3])->ToString(),
-													 term_to_js(res->ctx,vm->env,array[4])->ToInteger(),
-													 term_to_js(res->ctx,vm->env,array[5])->ToInteger());
-	
-	v8::Handle<v8::String> script = v8::String::New(buf, len);
-	v8::Handle<v8::Script> compiled = v8::Script::Compile(script,origin);
-	
-	delete origin;
-	
-	if (compiled.IsEmpty()) {
-	  SEND(vm->server,enif_make_tuple3(env,
-									   enif_make_atom(env,"result"),
-									   enif_make_copy(env, script_ref),
-									   enif_make_tuple2(env,
-														enif_make_atom(env,"throw"),
-														js_to_term(res->ctx,env,try_catch.Exception()))));
-	} else {
-	  v8::Handle<v8::Value> value = compiled->Run();
-	  if (value.IsEmpty()) {
-		SEND(vm->server,enif_make_tuple3(env,
-										 enif_make_atom(env,"result"),
-										 enif_make_copy(env, script_ref),
-										 enif_make_tuple2(env,
-														  enif_make_atom(env,"throw"),
-														  js_to_term(res->ctx,env,try_catch.Exception()))));
-	  } else {
-		SEND(vm->server,enif_make_tuple3(env,
-										 enif_make_atom(env,"result"),
-										 enif_make_copy(env, script_ref),
-										 enif_make_tuple2(env, enif_make_atom(env,"ok"),
-														  js_to_term(res->ctx,env,value))));
-	  }
-	}
+    v8::TryCatch try_catch;
+
+    TRACE("(%p) script - 4a\n", vm->isolate);
+
+   
+    v8::ScriptOrigin * origin = new v8::ScriptOrigin(term_to_js(res->ctx,vm->isolate,vm->env,array[3])->ToString(),
+						     term_to_js(res->ctx,vm->isolate,vm->env,array[4])->ToInteger(),
+						     term_to_js(res->ctx,vm->isolate,vm->env,array[5])->ToInteger());
+    
+    TRACE("(%p) script - 5\n", vm->isolate);
+
+    v8::Handle<v8::String> script = v8::String::New(buf, len);
+    v8::Handle<v8::Script> compiled = v8::Script::Compile(script,origin);
+    
+    TRACE("(%p) script - 6\n", vm->isolate);
+
+
+    delete origin;
+    
+    if (compiled.IsEmpty()) {
+      SEND(vm->server,
+	   enif_make_tuple3(env,
+			    enif_make_atom(env,"result"),
+			    enif_make_copy(env, script_ref),
+			    enif_make_tuple2(env,
+					     enif_make_atom(env,"throw"),
+					     js_to_term(res->ctx,vm->isolate,env,try_catch.Exception()))));
+    } else {
+      TRACE("(%p) script - 7\n", vm->isolate);
+
+      v8::Handle<v8::Value> value = compiled->Run();
+      TRACE("(%p) script - 8\n", vm->isolate);
+    
+      if (value.IsEmpty()) {
+	SEND(vm->server,enif_make_tuple3(env,
+					 enif_make_atom(env,"result"),
+					 enif_make_copy(env, script_ref),
+					 enif_make_tuple2(env,
+							  enif_make_atom(env,"throw"),
+							  js_to_term(res->ctx,vm->isolate,env,try_catch.Exception()))));
+      } else {
+	SEND(vm->server,enif_make_tuple3(env,
+					 enif_make_atom(env,"result"),
+					 enif_make_copy(env, script_ref),
+					 enif_make_tuple2(env, enif_make_atom(env,"ok"),
+							  js_to_term(res->ctx,vm->isolate,env,value))));
+      }
+    }
   }
   enif_free_env(ref_env);
   free(buf);

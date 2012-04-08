@@ -4,10 +4,13 @@
 -include_lib("erlv8/include/erlv8.hrl").
 
 %% API
--export([start_link/1,start/0,vm_resource/1,run/2,run/3,run/4,global/1,stop/1,
-		 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
-		 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
-		 stor/3, retr/2, gc/1]).
+-export([start_link/1,start/0,vm_resource/1,
+	 run/2, run/3, run/4, 
+	 run_timed/3, run_timed/4, run_timed/5,
+	 global/1,stop/1,
+	 to_string/2,to_detail_string/2,taint/2,untaint/1,equals/3, strict_equals/3, 
+	 enqueue_tick/2, enqueue_tick/3, enqueue_tick/4, next_tick/2, next_tick/3, next_tick/4,
+	 stor/3, retr/2, gc/1, kill/1]).
 
 %% gen_server2 callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -16,12 +19,12 @@
 -define(SERVER, ?MODULE). 
 
 -record(state, {
-		  vm,
-		  ticked,
-		  storage = [],
-		  context,
-		  debug
-		 }).
+	  vm,
+	  ticked,
+	  storage = [],
+	  context,
+	  debug
+	 }).
 
 -define(Error(Msg), lists:flatten(io_lib:format("~s: ~p",[Msg,Trace]))).
 -define(ErrorVal(Msg), lists:flatten(io_lib:format("~s: ~p ~p",[Msg,Val,Trace]))).
@@ -40,11 +43,33 @@ vm_resource(Server) ->
 run(Server, Source) ->
 	run(Server, erlv8_context:get(Server), Source).
 
+run_timed(Server, Source, Timeout) ->
+    run_timed(Server, erlv8_context:get(Server), Source, Timeout).
+
+run_timed(Server, {_, _CtxRes} = Context, Source, Timeout) ->
+    run_timed(Server, Context, Source, {"unknown",0,0}, Timeout).
+
+run_timed(Server, {C, CtxRes}, Source, {Name, LineOffset, ColumnOffset}, Timeout) ->
+    Pid = spawn_link(fun() ->
+			     receive {'$gen_call', From, run} ->
+				     Res = run(Server, {C , CtxRes}, Source, {Name, LineOffset, ColumnOffset}),
+				     gen_server:reply(From, Res)
+			     end
+		     end),
+    try gen_server:call(Pid, run, Timeout)
+    catch
+	exit:{timeout ,_} ->
+	    erlv8_vm:kill(Server),
+	    {error, timeout}
+    end.
+
+
 run(Server, {_, _CtxRes} = Context, Source) ->
 	run(Server, Context, Source, {"unknown",0,0}).
 
 run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
 	enqueue_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
+
 
 global(Server) ->
 	Ctx = erlv8_context:get(Server),
@@ -102,8 +127,8 @@ retr(Server, Key) ->
 
 untaint({erlv8_object, _,_}=O) ->
 	{erlv8_object,lists:map(fun ({Key, Val}) ->
-									{Key, untaint(Val)}
-							end,O:proplist()), undefined};
+					{Key, untaint(Val)}
+				end,O:proplist()), undefined};
 untaint({erlv8_array, _,_}=O) ->
 	{erlv8_array,lists:map(fun untaint/1,O:list()), undefined};
 untaint({erlv8_fun, _,_}=F) -> %% broken
@@ -118,6 +143,11 @@ untaint(Other) ->
 gc(Server) ->
 	(catch enqueue_tick(Server, {gc}, 0)),
 	ok.
+
+kill(Server) ->
+    gen_server2:call(Server, kill),
+    erlv8_vm:run(Server, "1"), % hide returning {throw, null}.
+    ok.
 
 %%--------------------------------------------------------------------
 %% @doc
@@ -179,8 +209,8 @@ handle_call(context, _From, #state{} = State) ->
 handle_call(new_context, _From, #state{ vm = VM } = State) ->
 	{reply, {self(), erlv8_nif:new_context(VM)}, State};
 
-handle_call({global, Resource}, _From, #state{} = State) ->
-	{reply, erlv8_nif:global(Resource), State};
+handle_call({global, Resource}, _From, #state{vm = VM} = State) ->
+	{reply, erlv8_nif:global(VM, Resource), State};
 
 handle_call({to_string, Val}, _From, #state { vm = VM } = State) ->
 	Reply = erlv8_nif:to_string(VM, Val),
@@ -189,6 +219,10 @@ handle_call({to_string, Val}, _From, #state { vm = VM } = State) ->
 handle_call({to_detail_string, Val}, _From, #state { vm = VM } = State) ->
 	Reply = erlv8_nif:to_detail_string(VM, Val),
 	{reply, Reply, State};
+
+handle_call(kill, _From, #state { vm = VM } = State) ->
+    Reply = erlv8_nif:kill(VM),
+    {reply, Reply, State};
 
 handle_call(stop, _From, State) ->
 	{stop, normal, ok, State};
@@ -276,6 +310,7 @@ handle_info({F,#erlv8_fun_invocation{ is_construct_call = ICC, this = This, ref 
 		  end),
 	{noreply, State};
 handle_info({result, Ref, Result}, #state{ ticked = Ticked } = State) ->
+    
 	case ets:lookup(Ticked, Ref) of
 		[] ->
 			{noreply, State};
@@ -289,8 +324,11 @@ handle_info({'DEBUG',Name,Payload}, #state{ debug = Debug } = State) ->
 	ets:insert(Debug, {Name, Payload}),
 	{noreply, State};
 
+handle_info(timeout, State) ->
+    kill(self()),
+    {noreply, State};
 handle_info(_Info, State) ->
-	{noreply, State}.
+    {noreply, State}.
 
 prioritise_info({retick, _}, _State) ->
 	1;
@@ -333,5 +371,3 @@ update_ticked(_Ref, From, {result, _, _}, Ticked) -> %% do not insert results, n
 	Ticked;
 update_ticked(Ref, From, Tick, Ticked) ->
 	ets:insert(Ticked, {Ref, {From, Tick}}).
-
-

@@ -5,7 +5,7 @@ TickHandler(SetTickHandler) {
   ERL_NIF_TERM value = enif_make_copy(tmp_env, array[3]); // stashing it away since Set() might call an accessor, which might change vm->env
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
-	LHCS(obj_res->ctx);
+	LHCS(vm->isolate, obj_res->ctx);
 
 	v8::PropertyAttribute property_attribute = v8::None;
 
@@ -13,13 +13,13 @@ TickHandler(SetTickHandler) {
 	  property_attribute = term_to_property_attribute(vm->env,array[4]);
 	}
 	
-	obj_res->val->ToObject()->Set(term_to_js(obj_res->ctx, vm->env,array[2]),term_to_js(obj_res->ctx, tmp_env,value), property_attribute);
+	obj_res->val->ToObject()->Set(term_to_js(obj_res->ctx, vm->isolate, vm->env,array[2]),term_to_js(obj_res->ctx, vm->isolate, tmp_env,value), property_attribute);
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
-						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,tick_ref),
-						  enif_make_copy(env,value)));
+				  enif_make_atom(env,"result"),
+				  enif_make_copy(env,tick_ref),
+				  enif_make_copy(env,value)));
   } 
   enif_free_env(tmp_env);
   TickHandlerResolution result;
@@ -30,9 +30,9 @@ TickHandler(SetTickHandler) {
 TickHandler(SetProtoTickHandler) {
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
-	LHCS(obj_res->ctx);
+	LHCS(vm->isolate, obj_res->ctx);
 
-    const char *atom_val = obj_res->val->ToObject()->SetPrototype(term_to_js(obj_res->ctx,vm->env,array[2])) ? "true" : "false";
+    const char *atom_val = obj_res->val->ToObject()->SetPrototype(term_to_js(obj_res->ctx,vm->isolate,vm->env,array[2])) ? "true" : "false";
 	
 	SEND(vm->server,
 		 enif_make_tuple3(env,
@@ -48,15 +48,15 @@ TickHandler(SetProtoTickHandler) {
 TickHandler(SetHiddenTickHandler) {
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
-	LHCS(obj_res->ctx);
+	LHCS(vm->isolate, obj_res->ctx);
 
-	obj_res->val->ToObject()->SetHiddenValue(term_to_js(obj_res->ctx,vm->env,array[2])->ToString(),term_to_js(obj_res->ctx,vm->env,array[3]));
-
+	obj_res->val->ToObject()->SetHiddenValue(term_to_js(obj_res->ctx, vm->isolate, vm->env,array[2])->ToString(),term_to_js(obj_res->ctx,vm->isolate, vm->env,array[3]));
+	
 	SEND(vm->server,
-		 enif_make_tuple3(env,
-						  enif_make_atom(env,"result"),
-						  enif_make_copy(env,tick_ref),
-						  enif_make_copy(env,array[2])));
+	     enif_make_tuple3(env,
+			      enif_make_atom(env,"result"),
+			      enif_make_copy(env,tick_ref),
+			      enif_make_copy(env,array[2])));
   } 
   TickHandlerResolution result;
   result.type = DONE;
@@ -69,7 +69,7 @@ TickHandler(SetInternalTickHandler) {
   unsigned len;
 
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
-	LHCS(obj_res->ctx);
+	LHCS(vm->isolate, obj_res->ctx);
 
 	int index;
 	enif_get_int(vm->env, array[2], &index);
@@ -88,7 +88,7 @@ TickHandler(SetInternalTickHandler) {
 		v8::Handle<v8::Object> proto = extern_name_to_proto(vm, name);
 		obj_res->val->ToObject()->SetInternalField(index,term_to_external(array[3]));
 	  } else {
-		obj_res->val->ToObject()->SetInternalField(index,term_to_js(obj_res->ctx,vm->env,array[3]));
+		obj_res->val->ToObject()->SetInternalField(index,term_to_js(obj_res->ctx,vm->isolate, vm->env,array[3]));
 	  }
 	  
 	  SEND(vm->server,
@@ -120,10 +120,10 @@ TickHandler(SetAccessorTickHandler) {
   const char *atom_val;
   val_res_t *obj_res;
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&obj_res))) {
-	LHCS(obj_res->ctx);
+	LHCS(vm->isolate, obj_res->ctx);
 
 	if (arity > 3) {
-	  v8::Handle<v8::Value> name = term_to_js(obj_res->ctx,vm->env,array[2]);
+	  v8::Handle<v8::Value> name = term_to_js(obj_res->ctx,vm->isolate, vm->env,array[2]);
 	  if (!name->IsString()) {
           goto badarg;
       }
@@ -132,7 +132,7 @@ TickHandler(SetAccessorTickHandler) {
 	  v8::Persistent<v8::Object> data = v8::Persistent<v8::Object>::New(v8::Object::New());
 	  data.MakeWeak(NULL,weak_accessor_data_cleaner); // so that we'll release externals when we're done
 
-	  if (term_to_js(obj_res->ctx,vm->env,array[3])->IsUndefined()) {
+	  if (term_to_js(obj_res->ctx,vm->isolate, vm->env,array[3])->IsUndefined()) {
           goto badarg;
 	  } else {
 		data->SetHiddenValue(v8::String::New("_getter"), term_to_external(array[3]));
@@ -197,7 +197,7 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
 
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * 1);
-  arr[0] = js_to_term(vm->context, vm->env, property);
+  arr[0] = js_to_term(vm->context, vm->isolate, vm->env, property);
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,1);
   free(arr);
 
@@ -208,8 +208,8 @@ v8::Handle<v8::Value> GetterFun(v8::Local<v8::String> property,const v8::Accesso
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,"false"),
-										 js_to_term(vm->context, env, info.Holder()),
-										 js_to_term(vm->context, env, info.This()),
+										 js_to_term(vm->context, vm->isolate, env, info.Holder()),
+										 js_to_term(vm->context, vm->isolate, env, info.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
 										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
@@ -229,8 +229,8 @@ void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v
 
   // prepare arguments
   ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * 2);
-  arr[0] = js_to_term(vm->context, vm->env, property);
-  arr[1] = js_to_term(vm->context, vm->env, value);
+  arr[0] = js_to_term(vm->context, vm->isolate, vm->env, property);
+  arr[1] = js_to_term(vm->context, vm->isolate, vm->env, value);
   ERL_NIF_TERM arglist = enif_make_list_from_array(vm->env,arr,2);
   free(arr);
 
@@ -241,8 +241,8 @@ void SetterFun(v8::Local<v8::String> property,v8::Local<v8::Value> value,const v
 						enif_make_tuple7(env, 
 										 enif_make_atom(env,"erlv8_fun_invocation"),
 										 enif_make_atom(env,"false"),
-										 js_to_term(vm->context, env, info.Holder()),
-										 js_to_term(vm->context, env, info.This()),
+										 js_to_term(vm->context, vm->isolate, env, info.Holder()),
+										 js_to_term(vm->context, vm->isolate, env, info.This()),
 										 enif_make_copy(env, ref),
 										 enif_make_pid(env, vm->server),
 										 enif_make_copy(env, external_to_term(v8::Context::GetCurrent()->Global()->GetHiddenValue(v8::String::New("__erlv8__ctx__"))))
