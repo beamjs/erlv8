@@ -1,4 +1,5 @@
 #include "erlv8.hh"
+#include "utf8.h"
 
 int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 {
@@ -167,6 +168,8 @@ v8::Handle<v8::Value> term_to_js(v8::Handle<v8::Context> ctx,  v8::Isolate* isol
   } else if (enif_inspect_iolist_as_binary(env, term, &string_binary)) { // string
     TRACE("(%p) term_to_js - 3 i\n", isolate);
     v8::Local<v8::String> s = v8::String::New((const char *)string_binary.data, string_binary.size);
+    if (s->Utf8Length() != string_binary.size)
+      printf("%d != %lu\n", s->Utf8Length()-1, string_binary.size);
     return handle_scope.Close(s);
   } else if (enif_is_tuple(env, term)) {
     TRACE("(%p) term_to_js - 3 j\n", isolate);  
@@ -330,8 +333,19 @@ ERL_NIF_TERM js_to_term(v8::Handle<v8::Context> ctx,  v8::Isolate* isolate, ErlN
   } else if (val->IsString()) {
     TRACE("(%p) js_to_term - 3 e\n", isolate);
     ErlNifBinary result_binary = {0};
-    enif_alloc_binary(v8::String::Utf8Value(val->ToString()).length(), &result_binary);
-    (void)memcpy(result_binary.data, *v8::String::Utf8Value(val->ToString()), result_binary.size);
+    {
+      /*      v8::Local<v8::String> S =  val->ToString();
+	      v8::String::Utf8Value  V = v8::String::Utf8Value(val->ToString());*/
+      /*      enif_alloc_binary(S->Utf8Length(), &result_binary);
+	      S->WriteUtf8((char *) result_binary.data, result_binary.size);*/
+    }
+    /*    enif_alloc_binary(v8::String::Utf8Value(val->ToString()).length(), &result_binary);
+	  (void)memcpy(result_binary.data, *v8::String::Utf8Value(val->ToString()), result_binary.size);*/
+
+    enif_alloc_binary(v8::String::Utf8Value(val).length(), &result_binary);
+    (void)memcpy(result_binary.data, *v8::String::Utf8Value(val), result_binary.size);
+
+
     return enif_make_binary(env, &result_binary);
   } else if (val->IsInt32()) {
     TRACE("(%p) js_to_term - 3 f\n", isolate);
