@@ -1,5 +1,4 @@
 #include "erlv8.hh"
-#include "utf8.h"
 
 int enif_is_proplist(ErlNifEnv * env, ERL_NIF_TERM term)
 {
