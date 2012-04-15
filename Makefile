@@ -5,14 +5,14 @@ LINUX=$(shell uname | grep Linux | wc -l | xargs echo)
 
 V8ENV=GYPFLAGS="-f make"
 ifeq ($(X64),1)
-V8FLAGS=x64
+V8FLAGS=arch=x64
 else
 V8FLAGS=
 endif
 
 ifeq ($(X64L),1)
-V8FLAGS=x64
-V8ENV="CCFLAGS=-fPIC;$(V8ENV)"
+V8FLAGS=arch=x64
+V8ENV=CCFLAGS=-fPIC
 endif
 
 ifeq ($(LINUX),1)
@@ -33,16 +33,7 @@ deps/zeromq2/.git/HEAD:
 	@git submodule update
 
 deps/v8/libv8.a: deps/v8/.git/config 
-ifeq ($(OSX),1)
-ifeq ($(V8FLAGS),"")
-	cd deps/v8 && scons
-else
-	cd deps/v8 && scons arch=$(V8FLAGS)
-endif
-else
-	@cd deps/v8 && make dependencies
-	cd deps/v8 && $(V8ENV) make $(V8FLAGS)
-endif
+	cd deps/v8 && $(V8ENV) scons arch=$(V8FLAGS)
 
 deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
 	@cd deps/zeromq2 && ./autogen.sh && ./configure $(ZMQ_FLAGS) && make
