@@ -33,7 +33,7 @@ deps/zeromq2/.git/HEAD:
 	@git submodule update
 
 deps/v8/libv8.a: deps/v8/.git/config 
-	cd deps/v8 && $(V8ENV) scons arch=$(V8FLAGS)
+	cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
 deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
 	@cd deps/zeromq2 && ./autogen.sh && ./configure $(ZMQ_FLAGS) && make
