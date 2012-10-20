@@ -8,8 +8,15 @@ TickHandler(ProplistTickHandler) {
   if (enif_get_resource(vm->env,array[1],val_resource,(void **)(&res))) {
     LHCS(vm->isolate, res->ctx);
 
-    v8::Handle<v8::Array> keys = res->val->ToObject()->GetPropertyNames();
-    
+    v8::Handle<v8::Array> keys;
+    if (res->val->IsNativeError()) { //workaround for V8 bug #1595
+        keys = v8::Array::New(2);
+            keys->Set(v8::String::New("0"), v8::String::New("name"));
+            keys->Set(v8::String::New("1"), v8::String::New("message"));
+    } else {
+        keys = res->val->ToObject()->GetPropertyNames();
+    }
+
     ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());
 
     for (unsigned int i=0;i<keys->Length();i++) {
