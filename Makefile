@@ -22,7 +22,11 @@ ZMQ_FLAGS=
 endif
 
 
-all: compile 
+all: compile
+
+sh:
+	@erl -pa ebin/ deps/*/ebin/ -s reloader -eval "d:err()"
+
 
 deps/v8/.git/config:
 	@git submodule init
@@ -32,13 +36,14 @@ deps/zeromq2/.git/HEAD:
 	@git submodule init
 	@git submodule update
 
-deps/v8/libv8.a: deps/v8/.git/config 
+deps/v8/libv8.a: deps/v8/.git/config
 	cd deps/v8 && $(V8ENV) scons $(V8FLAGS)
 
 deps/zeromq2/src/.libs/libzmq.a: deps/zeromq2/.git/HEAD
 	@cd deps/zeromq2 && ./autogen.sh && ./configure $(ZMQ_FLAGS) && make
 
 dependencies: deps/v8/libv8.a deps/zeromq2/src/.libs/libzmq.a
+	@./rebar get-deps
 
 test: compile
 	@./rebar eunit skip_deps=true
@@ -46,14 +51,15 @@ test: compile
 dbg-test: compile
 	@USE_GDB=true ./rebar eunit skip_deps=true
 
-compile: dependencies
-	@./rebar get-deps
+compile: dependencies fast
+
+fast:
 	@EXTRA_CFLAGS= ./rebar compile
 
 debug: dependencies
 	@EXTRA_CFLAGS="-g3 -O0 -DERLV8_DEBUG" ./rebar compile
 
-clean: 
+clean:
 	-rm c_src/*.o
 
 analyze:
