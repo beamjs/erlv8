@@ -67,7 +67,9 @@ run_timed(Server, {C, CtxRes}, Source, {Name, LineOffset, ColumnOffset}, Timeout
 run(Server, {_, _CtxRes} = Context, Source) ->
 	run(Server, Context, Source, {"unknown",0,0}).
 
-run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) ->
+run(Server, A, Source, B) when is_binary(Source) ->
+    run(Server, A, binary_to_list(Source), B);
+run(Server, {_, CtxRes}, Source, {Name, LineOffset, ColumnOffset}) when is_list(Source) ->
 	enqueue_tick(Server, {script, CtxRes, Source, Name, LineOffset, ColumnOffset}).
 
 
