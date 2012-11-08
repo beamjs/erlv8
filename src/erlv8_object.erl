@@ -1,6 +1,6 @@
 -module(erlv8_object).
 
--record(erlv8_object, {resource,vm}).
+-include("erlv8.hrl").
 
 -export([proplist/1, set_value/3, set_value/4, set_hidden_value/3, get_value/2, get_value/3, get_hidden_value/2, get_hidden_value/3,
          internal_field_count/1, get_internal_field/2, set_internal_field/3,

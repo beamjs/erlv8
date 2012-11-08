@@ -1,7 +1,6 @@
 -module(erlv8_fun).
 
--record(erlv8_fun, {resource, %% or fun()
-                    vm}). %% or proplist()
+-include("erlv8.hrl").
 
 -extends(erlv8_object).
 
