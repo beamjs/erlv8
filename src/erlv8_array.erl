@@ -1,39 +1,48 @@
--module(erlv8_array,[Resource,VM]).
+-module(erlv8_array).
+
+-include("erlv8.hrl").
+
 -extends(erlv8_object).
--export([list/0,object/0,new/1, length/0, push/1, unshift/1, delete/1]).
 
-list() ->
-	erlv8_vm:enqueue_tick(VM,{list,Resource}).
+-compile({no_auto_import,[length/1]}).
 
-object() ->
-	erlv8_object:new(Resource,VM).
+-export([list/1, object/1, length/1, push/2, unshift/2, delete/2,
+
+         new/1, new/2]).
+
+list(#erlv8_array{resource = Resource, vm = VM}) ->
+    erlv8_vm:enqueue_tick(VM,{list,Resource}).
+
+object(#erlv8_array{resource = Resource, vm = VM}) ->
+    erlv8_object:new(Resource,VM).
 
 new(O) ->
-	{erlv8_array, O, undefined}.
+    new(O, undefined).
 
-length() ->
-	length(list()). %% TODO: I guess it will be more efficient if we had a NIF for that?
+new(O,V) ->
+    #erlv8_array{resource = O, vm = V}.
 
-push(Val) ->
-	M = {?BASE_MODULE, Resource, VM},
-	M:set_value(length(),Val).
+length(Self) ->
+    erlang:length(list(Self)). %% TODO: I guess it will be more efficient if we had a NIF for that?
 
-unshift(Val) ->
-	M = {?BASE_MODULE, Resource, VM},
-	L = length(),
-	lists:foreach(fun (I) ->
-						  M:set_value(L-I,M:get_value(L-I-1))
-				  end, lists:seq(0,L-1)),
-	M:set_value(0,Val).
+push(Val, Self) ->
+    M = Self:object(),
+    M:set_value(length(Self),Val).
 
-delete(Index) ->
-	M = {?BASE_MODULE, Resource, VM},
-	L = length(),
-	V = M:get_value(Index),
-	lists:foreach(fun (I) ->
-						  M:set_value(I,M:get_value(I+1))
-				  end, lists:seq(Index,L-1)),
-	M:set_value(length,L-1),
-	V.
-	
-	
+unshift(Val, Self) ->
+    M = Self:object(),
+    L = length(Self),
+    lists:foreach(fun (I) ->
+                          M:set_value(L-I,M:get_value(L-I-1))
+                  end, lists:seq(0,L-1)),
+    M:set_value(0,Val).
+
+delete(Index, Self) ->
+    M = Self:object(),
+    L = length(Self),
+    V = M:get_value(Index),
+    lists:foreach(fun (I) ->
+                          M:set_value(I,M:get_value(I+1))
+                  end, lists:seq(Index,L-1)),
+    M:set_value(length,L-1),
+    V.

@@ -12,6 +12,7 @@
 
 -record(erlv8_object, { resource, vm }).
 -record(erlv8_fun, { resource, vm }).
--record(erlv8_array, { resource, vm }).
+-record(erlv8_array, {resource, %% or array()
+                      vm}). %% or proplist()
 
 		  

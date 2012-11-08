@@ -1,24 +1,36 @@
--module(erlv8_fun,[Resource,VM]).
+-module(erlv8_fun).
+
+-include("erlv8.hrl").
+
 -extends(erlv8_object).
--export([call/0,call/1,call/2,instantiate/0, instantiate/1, object/0]).
 
-call() ->
-	call([]).
+-export([call/1,call/2,call/3,instantiate/1, instantiate/2, object/1,
 
-call({erlv8_object, _,_}=T) ->
-	call(T,[]);
+         new/1, new/2]).
 
-call(Args) when is_list(Args) ->
-	erlv8_vm:enqueue_tick(VM, {call, Resource, Args}).
+call(Self) ->
+    call([], Self).
 
-call({erlv8_object, _,_}=This, Args) when is_list(Args) ->
-	erlv8_vm:enqueue_tick(VM, {call, Resource, Args, This}).
+call({erlv8_object, _,_}=T, Self) ->
+    call(T,[], Self);
 
-instantiate() ->
-	instantiate([]).
+call(Args, #erlv8_fun{resource = Resource, vm = VM}) when is_list(Args) ->
+    erlv8_vm:enqueue_tick(VM, {call, Resource, Args}).
 
-instantiate(Args) when is_list(Args) ->
-	erlv8_vm:enqueue_tick(VM, {inst, Resource, Args}).
+call({erlv8_object, _,_}=This, Args, #erlv8_fun{resource = Resource, vm = VM}) when is_list(Args) ->
+    erlv8_vm:enqueue_tick(VM, {call, Resource, Args, This}).
 
-object() ->
-	{erlv8_object, Resource, VM}.
+instantiate(Self) ->
+    instantiate([], Self).
+
+instantiate(Args, #erlv8_fun{resource = Resource, vm = VM}) when is_list(Args) ->
+    erlv8_vm:enqueue_tick(VM, {inst, Resource, Args}).
+
+object(#erlv8_fun{resource = Resource, vm = VM}) ->
+    {erlv8_object, Resource, VM}.
+
+new(O) ->
+    new(O,undefined).
+
+new(O, V) ->
+    #erlv8_fun{resource = O, vm = V}.
