@@ -110,8 +110,27 @@ next_tick(Server, Tick, Timeout) ->
 next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
 	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
 
-taint(Server, Value) ->
-    enqueue_tick(Server, {taint, Value}).
+taint(Server, {Tag, _R, _Vm} = Value) when Tag == erlv8_object;
+                                           Tag == erlv8_fun;
+                                           Tag == erlv8_array ->
+    enqueue_tick(Server, {taint, Value});
+
+taint(Server, {Error, _} = Value) when Error == error;
+                                       Error == throw ->
+    enqueue_tick(Server, {taint, Value});
+
+taint(Server, Value) when is_list(Value);
+                          is_binary(Value);
+                          is_atom(Value);
+                          is_number(Value);
+                          is_reference(Value);
+                          is_function(Value);
+                          is_pid(Value) ->
+    enqueue_tick(Server, {taint, Value});
+
+taint(_Server, _) ->
+    undefined.
+
 
 equals(Server, V1, V2) ->
     enqueue_tick(Server, {equals, V1, V2}).
