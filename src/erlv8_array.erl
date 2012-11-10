@@ -6,7 +6,7 @@
 
 -compile({no_auto_import,[length/1]}).
 
--export([list/1, object/1, length/1, push/2, unshift/2, delete/2,
+-export([list/1, object/1, length/1, push/2, unpush/1, unshift/2, delete/2,
 
          new/1, new/2]).
 
@@ -28,6 +28,10 @@ length(Self) ->
 push(Val, Self) ->
     M = Self:object(),
     M:set_value(length(Self),Val).
+
+unpush(Self) ->
+    M = Self:object(),
+    M:delete(M:length()-1).
 
 unshift(Val, Self) ->
     M = Self:object(),

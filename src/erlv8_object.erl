@@ -7,10 +7,17 @@
          set_prototype/2, get_prototype/1, delete/2, set_accessor/3, set_accessor/4, set_accessor/5, set_accessor/6,
          equals/2, strict_equals/2, call/2, call/3,
 
+         copy_properties_to/2,
+
          new/1, new/2]).
 
 proplist({_Erlv8Obj,  Resource, VM}) ->
     erlv8_vm:enqueue_tick(VM,{proplist, Resource}).
+
+copy_properties_to(Other, Self) ->
+    lists:foreach(fun({K, V}) ->
+                          Other:set_value(K, V)
+                  end, Self:proplist()).
 
 set_value(Key, Value, {_Erlv8Obj,  Resource, VM}) ->
     erlv8_vm:enqueue_tick(VM, {set, Resource, Key, Value}).

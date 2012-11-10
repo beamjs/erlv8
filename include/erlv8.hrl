@@ -16,3 +16,4 @@
                       vm}). %% or proplist()
 
 		  
+-define(is_v8(X), (is_record(X, erlv8_object) orelse is_record(X, erlv8_fun) orelse is_record(X, erlv8_array))).
