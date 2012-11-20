@@ -2,7 +2,9 @@
 
 -include("erlv8.hrl").
 
--export([proplist/1, set_value/3, set_value/4, set_hidden_value/3, get_value/2, get_value/3, get_hidden_value/2, get_hidden_value/3,
+-export([vm/1,
+
+         proplist/1, set_value/3, set_value/4, set_hidden_value/3, get_value/2, get_value/3, get_hidden_value/2, get_hidden_value/3,
          internal_field_count/1, get_internal_field/2, set_internal_field/3,
          set_prototype/2, get_prototype/1, delete/2, set_accessor/3, set_accessor/4, set_accessor/5, set_accessor/6,
          equals/2, strict_equals/2, call/2, call/3,
@@ -10,6 +12,9 @@
          copy_properties_to/2,
 
          new/1, new/2]).
+
+vm({Erlv8Obj,  _Resource, VM}) when ?is_v8(Erlv8Obj) ->
+    VM.
 
 proplist({_Erlv8Obj,  Resource, VM}) ->
     erlv8_vm:enqueue_tick(VM,{proplist, Resource}).
