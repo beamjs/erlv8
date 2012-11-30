@@ -10,11 +10,12 @@ TickHandler(ProplistTickHandler) {
 
     v8::Handle<v8::Array> keys;
     if (res->val->IsNativeError()) { //workaround for V8 bug #1595
-        keys = v8::Array::New(2);
-            keys->Set(v8::String::New("0"), v8::String::New("name"));
-            keys->Set(v8::String::New("1"), v8::String::New("message"));
+      keys = v8::Array::New(3);
+      keys->Set(v8::String::New("0"), v8::String::New("name"));
+      keys->Set(v8::String::New("1"), v8::String::New("message"));
+      keys->Set(v8::String::New("2"), v8::String::New("stack"));
     } else {
-        keys = res->val->ToObject()->GetPropertyNames();
+      keys = res->val->ToObject()->GetPropertyNames();
     }
 
     ERL_NIF_TERM *arr = (ERL_NIF_TERM *) malloc(sizeof(ERL_NIF_TERM) * keys->Length());

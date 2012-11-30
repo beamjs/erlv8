@@ -110,9 +110,7 @@ next_tick(Server, Tick, Timeout) ->
 next_tick(Server, Tick, Timeout, Ref) when is_reference(Ref) ->
 	gen_server2:call(Server,{next_tick, Tick, Ref}, Timeout).
 
-taint(Server, {Tag, _R, _Vm} = Value) when Tag == erlv8_object;
-                                           Tag == erlv8_fun;
-                                           Tag == erlv8_array ->
+taint(Server, Value) when ?is_v8(Value) ->
     enqueue_tick(Server, {taint, Value});
 
 taint(Server, {Error, _} = Value) when Error == error;
